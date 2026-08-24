@@ -135,9 +135,6 @@ const run = async () => {
 
               email,
 
-              authProvider:
-                "LOCAL",
-
               password,
 
               phone:
@@ -182,15 +179,6 @@ const run = async () => {
             changed = true;
           }
 
-          if (
-            user.authProvider !==
-            "LOCAL"
-          ) {
-            user.authProvider =
-              "LOCAL";
-
-            changed = true;
-          }
 
           if (changed) {
             await user.save();

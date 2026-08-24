@@ -1,10 +1,6 @@
 import mongoose from "mongoose";
-import { OAuth2Client } from "google-auth-library";
 
 import authRepository from "../repositories/auth.repository.js";
-
-import env from "../config/env.js";
-
 import HTTP_STATUS from "../constants/httpStatus.js";
 import ROLES from "../constants/roles.js";
 
@@ -16,16 +12,6 @@ import {
   verifyRefreshToken,
 } from "../utils/jwt.js";
 
-/**
- * ============================================================
- * Google Client
- * ============================================================
- */
-
-const googleClient =
-  new OAuth2Client(
-    env.googleClientId,
-  );
 
 /**
  * ============================================================
@@ -39,7 +25,6 @@ const TOKEN_TYPES = Object.freeze({
 
 const AUTH_PROVIDERS = Object.freeze({
   LOCAL: "LOCAL",
-  GOOGLE: "GOOGLE",
 });
 
 /**
@@ -97,7 +82,6 @@ const sanitizeUser = (
   const {
     password,
     refreshToken,
-    googleId,
     ...safeUser
   } = user;
 
@@ -368,287 +352,6 @@ const login = async ({
 
 /**
  * ============================================================
- * Verify Google ID Token
- * ============================================================
- */
-
-const verifyGoogleIdToken =
-  async (
-    idToken,
-  ) => {
-    if (
-      !idToken ||
-      typeof idToken !== "string"
-    ) {
-      throw new ApiError(
-        "Google ID token is required.",
-        HTTP_STATUS.BAD_REQUEST,
-      );
-    }
-
-    try {
-      const ticket =
-        await googleClient.verifyIdToken(
-          {
-            idToken,
-            audience:
-              env.googleClientId,
-          },
-        );
-
-      const payload =
-        ticket.getPayload();
-
-      if (
-        !payload ||
-        !payload.sub ||
-        !payload.email
-      ) {
-        throw new ApiError(
-          "Invalid Google account information.",
-          HTTP_STATUS.UNAUTHORIZED,
-        );
-      }
-
-      if (
-        payload.email_verified !==
-        true
-      ) {
-        throw new ApiError(
-          "Google email address is not verified.",
-          HTTP_STATUS.UNAUTHORIZED,
-        );
-      }
-
-      return {
-        googleId:
-          payload.sub,
-
-        email:
-          normalizeEmail(
-            payload.email,
-          ),
-
-        fullName:
-          typeof payload.name ===
-            "string" &&
-          payload.name.trim()
-            ? payload.name.trim()
-            : payload.email
-                .split("@")[0],
-
-        avatarUrl:
-          typeof payload.picture ===
-            "string"
-            ? payload.picture
-            : "",
-      };
-    } catch (error) {
-      if (
-        error instanceof
-        ApiError
-      ) {
-        throw error;
-      }
-
-      throw new ApiError(
-        "Invalid Google ID token.",
-        HTTP_STATUS.UNAUTHORIZED,
-      );
-    }
-  };
-
-/**
- * ============================================================
- * Google Login
- * ============================================================
- */
-
-const googleLogin = async ({
-  idToken,
-  phone,
-  collegeId,
-}) => {
-  const googleUser =
-    await verifyGoogleIdToken(
-      idToken,
-    );
-
-  /**
-   * ----------------------------------------------------------
-   * Existing Google account
-   * ----------------------------------------------------------
-   */
-
-  let user =
-    await authRepository.findUserByGoogleId(
-      googleUser.googleId,
-    );
-
-  if (user) {
-    assertActiveUser(user);
-
-    user.lastLoginAt =
-      new Date();
-
-    await user.save();
-
-    const tokens =
-      await generateAndStoreTokens(
-        user,
-      );
-
-    return createAuthResponse(
-      user,
-      tokens,
-    );
-  }
-
-  /**
-   * ----------------------------------------------------------
-   * Existing local account
-   * ----------------------------------------------------------
-   *
-   * Never silently attach a Google identity to an existing
-   * password account.
-   */
-
-  const existingUser =
-    await authRepository.findUserByEmail(
-      googleUser.email,
-    );
-
-  if (existingUser) {
-    throw new ApiError(
-      "An account already exists with this email. Please log in with your existing account before linking Google.",
-      HTTP_STATUS.CONFLICT,
-    );
-  }
-
-  /**
-   * ----------------------------------------------------------
-   * New Google account
-   * ----------------------------------------------------------
-   */
-
-  if (
-    !phone ||
-    typeof phone !== "string"
-  ) {
-    throw new ApiError(
-      "Phone number is required for a new Google account.",
-      HTTP_STATUS.BAD_REQUEST,
-    );
-  }
-
-  if (
-    !collegeId ||
-    typeof collegeId !== "string"
-  ) {
-    throw new ApiError(
-      "College ID is required for a new Google account.",
-      HTTP_STATUS.BAD_REQUEST,
-    );
-  }
-
-  const normalizedPhone =
-    phone.trim();
-
-  const normalizedCollegeId =
-    collegeId.trim();
-
-  if (!normalizedPhone) {
-    throw new ApiError(
-      "Phone number is required for a new Google account.",
-      HTTP_STATUS.BAD_REQUEST,
-    );
-  }
-
-  if (!normalizedCollegeId) {
-    throw new ApiError(
-      "College ID is required for a new Google account.",
-      HTTP_STATUS.BAD_REQUEST,
-    );
-  }
-
-  const session =
-    await mongoose.startSession();
-
-  try {
-    session.startTransaction();
-
-    user =
-      await authRepository.createUser(
-        {
-          fullName:
-            googleUser.fullName,
-
-          email:
-            googleUser.email,
-
-          authProvider:
-            AUTH_PROVIDERS.GOOGLE,
-
-          googleId:
-            googleUser.googleId,
-
-          phone:
-            normalizedPhone,
-
-          collegeId:
-            normalizedCollegeId,
-
-          avatarUrl:
-            googleUser.avatarUrl,
-
-          role:
-            ROLES.STUDENT,
-
-          isActive:
-            true,
-
-          isEmailVerified:
-            true,
-        },
-        session,
-      );
-
-    const tokens =
-      await generateAndStoreTokens(
-        user,
-        session,
-      );
-
-    await session.commitTransaction();
-
-    return createAuthResponse(
-      user,
-      tokens,
-    );
-  } catch (error) {
-    if (
-      session.inTransaction()
-    ) {
-      await session.abortTransaction();
-    }
-
-    if (
-      isDuplicateKeyError(error)
-    ) {
-      throw new ApiError(
-        "An account already exists with this Google account or email.",
-        HTTP_STATUS.CONFLICT,
-      );
-    }
-
-    throw error;
-  } finally {
-    await session.endSession();
-  }
-};
-
-/**
- * ============================================================
  * Logout
  * ============================================================
  */
@@ -806,7 +509,6 @@ const getCurrentUser =
  * - password
  * - role
  * - authProvider
- * - googleId
  * - refreshToken
  * - isActive
  * - isEmailVerified
@@ -897,7 +599,6 @@ const authService =
   Object.freeze({
     register,
     login,
-    googleLogin,
     logout,
     refreshAccessToken,
     getCurrentUser,

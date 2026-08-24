@@ -58,34 +58,6 @@ const login = async (payload) => {
 
 /**
  * ============================================================
- * Google Login
- * ============================================================
- */
-
-const googleLogin = async (payload) => {
-  const response =
-    await apiClient.post(
-      "/v1/auth/google",
-      payload,
-      {
-        withCredentials: true,
-      },
-    );
-
-  const data =
-    response.data?.data;
-
-  if (!data?.accessToken) {
-    throw new Error(
-      "Google login response did not contain an access token.",
-    );
-  }
-
-  return data;
-};
-
-/**
- * ============================================================
  * Refresh Access Token
  * ============================================================
  *
@@ -169,7 +141,6 @@ const authApi =
   Object.freeze({
     register,
     login,
-    googleLogin,
     refreshAccessToken,
     getCurrentUser,
     logout,
@@ -178,7 +149,6 @@ const authApi =
 export {
   register,
   login,
-  googleLogin,
   refreshAccessToken,
   getCurrentUser,
   logout,

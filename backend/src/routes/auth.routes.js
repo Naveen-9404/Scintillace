@@ -42,19 +42,6 @@ router.post(
 );
 
 /**
- * Google Login
- *
- * POST /api/v1/auth/google
- */
-
-router.post(
-  "/google",
-  authValidator.googleLogin,
-  validate,
-  authController.googleLogin,
-);
-
-/**
  * Refresh Access Token
  *
  * POST /api/v1/auth/refresh

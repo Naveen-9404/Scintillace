@@ -127,9 +127,6 @@ apiClient.interceptors.response.use(
         "/v1/auth/register",
       ) ||
       requestUrl.includes(
-        "/v1/auth/google",
-      ) ||
-      requestUrl.includes(
         "/v1/auth/refresh",
       );
 

@@ -49,29 +49,6 @@ const findUserByEmail = async (
 
 /**
  * ============================================================
- * Find User By Google ID
- * ============================================================
- */
-
-const findUserByGoogleId = async (
-  googleId,
-  includeRefreshToken = false,
-) => {
-  const query = User.findOne({
-    googleId,
-  }).select("+googleId");
-
-  if (includeRefreshToken) {
-    query.select(
-      "+refreshToken",
-    );
-  }
-
-  return query.exec();
-};
-
-/**
- * ============================================================
  * Find User By ID
  * ============================================================
  */
@@ -194,7 +171,6 @@ const authRepository =
     createUser,
 
     findUserByEmail,
-    findUserByGoogleId,
     findUserById,
 
     updateProfile,

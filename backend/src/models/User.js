@@ -7,11 +7,6 @@ const { Schema, model } = mongoose;
 
 const SALT_ROUNDS = 12;
 
-const AUTH_PROVIDERS = Object.freeze({
-  LOCAL: "LOCAL",
-  GOOGLE: "GOOGLE",
-});
-
 const userSchema = new Schema(
   {
     /**
@@ -41,64 +36,21 @@ const userSchema = new Schema(
       ],
     },
 
-    /**
-     * ============================================================
-     * Authentication Provider
-     * ============================================================
-     */
-
-    authProvider: {
-      type: String,
-      enum: Object.values(
-        AUTH_PROVIDERS,
-      ),
-      default: AUTH_PROVIDERS.LOCAL,
-      required: true,
-      index: true,
-    },
 
     /**
-     * ============================================================
-     * Google Identity
-     * ============================================================
-     *
-     * Google `sub` is stored here.
-     *
-     * select:false prevents this value from being returned
-     * during normal user queries.
-     */
+ * ============================================================
+ * Password
+ * ============================================================
+ *
+ * Required for all local accounts.
+ */
 
-   googleId: {
+password: {
   type: String,
-  default: undefined,
-  unique: true,
-  sparse: true,
-  index: true,
+  required: true,
+  minlength: 8,
   select: false,
-  trim: true,
 },
-
-    /**
-     * ============================================================
-     * Password
-     * ============================================================
-     *
-     * Required for LOCAL accounts.
-     *
-     * GOOGLE accounts do not require a local password.
-     */
-
-    password: {
-      type: String,
-      required: function () {
-        return (
-          this.authProvider ===
-          AUTH_PROVIDERS.LOCAL
-        );
-      },
-      minlength: 8,
-      select: false,
-    },
 
     /**
      * ============================================================
@@ -203,7 +155,6 @@ const userSchema = new Schema(
       transform(doc, ret) {
         delete ret.password;
         delete ret.refreshToken;
-        delete ret.googleId;
 
         return ret;
       },
@@ -283,7 +234,3 @@ const User = model(
 );
 
 export default User;
-
-export {
-  AUTH_PROVIDERS,
-};

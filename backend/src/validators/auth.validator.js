@@ -134,53 +134,6 @@ const login = [
 
 /**
  * ============================================================
- * Google Login Validator
- * ============================================================
- *
- * New Google users must additionally provide phone and
- * collegeId because those fields are required by User.
- *
- * Existing Google users can authenticate using only idToken.
- */
-
-const googleLogin = [
-  body("idToken")
-    .trim()
-    .notEmpty()
-    .withMessage(
-      "Google ID token is required.",
-    ),
-
-  body("phone")
-    .optional()
-    .trim()
-    .matches(
-      /^\+?[0-9\s()-]{7,15}$/,
-    )
-    .withMessage(
-      "Invalid phone number.",
-    ),
-
-  body("collegeId")
-    .optional()
-    .trim()
-    .isLength({
-      min: 2,
-      max: 50,
-    })
-    .withMessage(
-      "College ID must be between 2 and 50 characters.",
-    )
-    .matches(
-      /^[A-Za-z0-9_-]+$/,
-    )
-    .withMessage(
-      "College ID contains invalid characters.",
-    ),
-];
-
-/**
- * ============================================================
  * Update Profile Validator
  * ============================================================
  *
@@ -250,7 +203,6 @@ const authValidator =
   Object.freeze({
     register,
     login,
-    googleLogin,
     updateProfile,
   });
 

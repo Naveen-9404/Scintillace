@@ -121,43 +121,6 @@ const login =
 
 /**
  * ============================================================
- * Google Login
- * ============================================================
- *
- * POST /api/v1/auth/google
- */
-
-const googleLogin =
-  asyncHandler(
-    async (req, res) => {
-      const {
-        user,
-        accessToken,
-        refreshToken,
-      } =
-        await authService.googleLogin(
-          req.body,
-        );
-
-      res.cookie(
-        "refreshToken",
-        refreshToken,
-        cookieOptions,
-      );
-
-      return ApiResponse.success(
-        res,
-        {
-          user,
-          accessToken,
-        },
-        "Google login successful.",
-      );
-    },
-  );
-
-/**
- * ============================================================
  * Refresh Access Token
  * ============================================================
  */
@@ -308,7 +271,6 @@ const authController =
   Object.freeze({
     register,
     login,
-    googleLogin,
     refreshToken,
     logout,
     getCurrentUser,
