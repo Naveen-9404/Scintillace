@@ -1,0 +1,502 @@
+@import "tailwindcss";
+
+/* ============================================================
+   SCINTILLACE DESIGN SYSTEM
+   ============================================================ */
+
+:root {
+  /* ==========================================================
+     GLOBAL FOUNDATION
+     ========================================================== */
+
+  --background: 222 47% 7%;
+  --foreground: 210 40% 98%;
+
+  --surface: 222 45% 10%;
+
+  --card: 222 40% 12%;
+  --card-foreground: 210 40% 98%;
+
+  --border: 217 25% 22%;
+
+  --muted: 215 20% 60%;
+
+  /* ==========================================================
+     SCINTILLACE BRAND
+     ========================================================== */
+
+  --primary: 189 94% 43%;
+  --primary-foreground: 210 40% 98%;
+
+  --secondary: 263 70% 60%;
+  --secondary-foreground: 210 40% 98%;
+
+  --accent: 199 89% 48%;
+
+  /* ==========================================================
+     MODULE COLORS
+     ========================================================== */
+
+  /* Home */
+
+  --module-home-primary: 189 94% 43%;
+  --module-home-secondary: 199 89% 48%;
+
+  /* Authentication */
+
+  --module-auth-primary: 217 91% 60%;
+  --module-auth-secondary: 189 94% 43%;
+
+  /* Profile */
+
+  --module-profile-primary: 263 70% 60%;
+  --module-profile-secondary: 239 84% 67%;
+
+  /* Announcements */
+
+  --module-announcements-primary: 38 92% 50%;
+  --module-announcements-secondary: 25 95% 53%;
+
+  /* FAQ */
+
+  --module-faq-primary: 160 84% 39%;
+  --module-faq-secondary: 174 72% 56%;
+
+  /* Gallery */
+
+  --module-gallery-primary: 330 81% 60%;
+  --module-gallery-secondary: 316 70% 50%;
+
+  /* Sponsors */
+
+  --module-sponsors-primary: 45 93% 47%;
+  --module-sponsors-secondary: 32 95% 44%;
+
+  /* Contact */
+
+  --module-contact-primary: 217 91% 60%;
+  --module-contact-secondary: 239 84% 67%;
+
+  /* Certificates */
+
+  --module-certificates-primary: 32 95% 44%;
+  --module-certificates-secondary: 45 93% 47%;
+
+  /* Accommodation */
+
+  --module-accommodation-primary: 160 84% 39%;
+  --module-accommodation-secondary: 189 94% 43%;
+
+  /* Payments */
+
+  --module-payments-primary: 142 71% 45%;
+  --module-payments-secondary: 160 84% 39%;
+
+  /* Tickets */
+
+  --module-tickets-primary: 316 70% 50%;
+  --module-tickets-secondary: 263 70% 60%;
+
+  /* Admin */
+
+  --module-admin-primary: 263 70% 60%;
+  --module-admin-secondary: 316 70% 50%;
+
+  /* Events */
+
+  --module-events-primary: 189 94% 43%;
+  --module-events-secondary: 263 70% 60%;
+
+  /* ==========================================================
+     UI SYSTEM
+     ========================================================== */
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+
+  --shadow-card:
+    0 20px 50px rgba(0, 0, 0, 0.25);
+
+  --shadow-glow:
+    0 0 40px rgba(34, 211, 238, 0.15);
+
+  --duration-fast: 150ms;
+  --duration-normal: 300ms;
+  --duration-slow: 500ms;
+}
+
+/* ============================================================
+   BASE
+   ============================================================ */
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+
+  background:
+    radial-gradient(
+      circle at 15% 10%,
+      rgba(34, 211, 238, 0.05),
+      transparent 28%
+    ),
+    radial-gradient(
+      circle at 85% 20%,
+      rgba(139, 92, 246, 0.05),
+      transparent 30%
+    ),
+    hsl(var(--background));
+
+  color: hsl(var(--foreground));
+
+  font-family:
+    "Inter",
+    sans-serif;
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================================
+   TYPOGRAPHY
+   ============================================================ */
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family:
+    "Poppins",
+    sans-serif;
+}
+
+/* ============================================================
+   SELECTION
+   ============================================================ */
+
+::selection {
+  background: hsl(var(--primary) / 0.25);
+  color: white;
+}
+
+/* ============================================================
+   SCROLLBAR
+   ============================================================ */
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary) / 0.35);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary) / 0.6);
+}
+
+/* ============================================================
+   FLOATING ANIMATIONS
+   ============================================================ */
+
+@keyframes floatOne {
+  0%,
+  100% {
+    transform:
+      translate3d(0, 0, 0)
+      rotate(0deg);
+  }
+
+  50% {
+    transform:
+      translate3d(0, -18px, 0)
+      rotate(2deg);
+  }
+}
+
+@keyframes floatTwo {
+  0%,
+  100% {
+    transform:
+      translate3d(0, 0, 0)
+      rotate(0deg);
+  }
+
+  50% {
+    transform:
+      translate3d(12px, -12px, 0)
+      rotate(-2deg);
+  }
+}
+
+@keyframes floatThree {
+  0%,
+  100% {
+    transform:
+      translate3d(0, 0, 0)
+      rotate(0deg);
+  }
+
+  50% {
+    transform:
+      translate3d(-14px, -20px, 0)
+      rotate(3deg);
+  }
+}
+
+@keyframes floatFour {
+  0%,
+  100% {
+    transform:
+      translate3d(0, 0, 0)
+      rotate(0deg);
+  }
+
+  50% {
+    transform:
+      translate3d(10px, 8px, 0)
+      rotate(-2deg);
+  }
+}
+
+.float-1 {
+  animation:
+    floatOne 5.8s
+    ease-in-out
+    infinite;
+}
+
+.float-2 {
+  animation:
+    floatTwo 7s
+    ease-in-out
+    infinite;
+}
+
+.float-3 {
+  animation:
+    floatThree 6.5s
+    ease-in-out
+    infinite;
+}
+
+.float-4 {
+  animation:
+    floatFour 8.2s
+    ease-in-out
+    infinite;
+}
+
+/* ============================================================
+   GLOW ANIMATION
+   ============================================================ */
+
+@keyframes pulseGlow {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.35;
+  }
+
+  50% {
+    transform: scale(1.15);
+    opacity: 0.6;
+  }
+}
+
+.glow {
+  animation:
+    pulseGlow 8s
+    ease-in-out
+    infinite;
+}
+
+/* ============================================================
+   MODULE ATMOSPHERES
+   ============================================================ */
+
+.module-glow {
+  position: relative;
+  isolation: isolate;
+}
+
+.module-glow::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+
+  z-index: -1;
+
+  pointer-events: none;
+
+  opacity: 0.08;
+
+  background:
+    radial-gradient(
+      circle at 20% 10%,
+      hsl(var(--module-primary) / 0.8),
+      transparent 35%
+    ),
+    radial-gradient(
+      circle at 80% 90%,
+      hsl(var(--module-secondary) / 0.6),
+      transparent 40%
+    );
+}
+
+/* ============================================================
+   MODULE PROFILE
+   ============================================================ */
+
+.module-profile {
+  --module-primary:
+    var(--module-profile-primary);
+
+  --module-secondary:
+    var(--module-profile-secondary);
+}
+
+/* ============================================================
+   MODULE ANNOUNCEMENTS
+   ============================================================ */
+
+.module-announcements {
+  --module-primary:
+    var(--module-announcements-primary);
+
+  --module-secondary:
+    var(--module-announcements-secondary);
+}
+
+/* ============================================================
+   MODULE FAQ
+   ============================================================ */
+
+.module-faq {
+  --module-primary:
+    var(--module-faq-primary);
+
+  --module-secondary:
+    var(--module-faq-secondary);
+}
+
+/* ============================================================
+   MODULE GALLERY
+   ============================================================ */
+
+.module-gallery {
+  --module-primary:
+    var(--module-gallery-primary);
+
+  --module-secondary:
+    var(--module-gallery-secondary);
+}
+
+/* ============================================================
+   MODULE SPONSORS
+   ============================================================ */
+
+.module-sponsors {
+  --module-primary:
+    var(--module-sponsors-primary);
+
+  --module-secondary:
+    var(--module-sponsors-secondary);
+}
+
+/* ============================================================
+   MODULE CONTACT
+   ============================================================ */
+
+.module-contact {
+  --module-primary:
+    var(--module-contact-primary);
+
+  --module-secondary:
+    var(--module-contact-secondary);
+}
+
+/* ============================================================
+   MODULE CERTIFICATES
+   ============================================================ */
+
+.module-certificates {
+  --module-primary:
+    var(--module-certificates-primary);
+
+  --module-secondary:
+    var(--module-certificates-secondary);
+}
+
+/* ============================================================
+   MODULE ACCOMMODATION
+   ============================================================ */
+
+.module-accommodation {
+  --module-primary:
+    var(--module-accommodation-primary);
+
+  --module-secondary:
+    var(--module-accommodation-secondary);
+}
+
+/* ============================================================
+   MODULE PAYMENTS
+   ============================================================ */
+
+.module-payments {
+  --module-primary:
+    var(--module-payments-primary);
+
+  --module-secondary:
+    var(--module-payments-secondary);
+}
+
+/* ============================================================
+   MODULE TICKETS
+   ============================================================ */
+
+.module-tickets {
+  --module-primary:
+    var(--module-tickets-primary);
+
+  --module-secondary:
+    var(--module-tickets-secondary);
+}
+
+/* ============================================================
+   MODULE ADMIN
+   ============================================================ */
+
+.module-admin {
+  --module-primary:
+    var(--module-admin-primary);
+
+  --module-secondary:
+    var(--module-admin-secondary);
+}
+
+/* ============================================================
+   MODULE EVENTS
+   ============================================================ */
+
+.module-events {
+  --module-primary:
+    var(--module-events-primary);
+
+  --module-secondary:
+    var(--module-events-secondary);
+}

@@ -1,0 +1,8 @@
+const FESTIVAL_STATUS = Object.freeze({
+  DRAFT: 'DRAFT',
+  PUBLISHED: 'PUBLISHED',
+  COMPLETED: 'COMPLETED',
+  CANCELLED: 'CANCELLED',
+});
+
+export default FESTIVAL_STATUS;

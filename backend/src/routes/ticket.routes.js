@@ -1,0 +1,346 @@
+import express from "express";
+
+import ticketController from "../controllers/ticket.controller.js";
+
+import authenticate from "../middlewares/authenticate.js";
+import authorize from "../middlewares/authorize.js";
+import validateRequest from "../middlewares/validateRequest.js";
+
+import ROLES from "../constants/roles.js";
+
+import {
+  createTicketValidator,
+  ticketIdValidator,
+  ticketNumberValidator,
+  qrPayloadValidator,
+  eventTicketValidator,
+  festivalTicketValidator,
+  ticketQueryValidator,
+} from "../validators/ticket.validator.js";
+
+const router = express.Router();
+
+/**
+ * ============================================================
+ * Public Routes
+ * ============================================================
+ */
+
+/**
+ * ------------------------------------------------------------
+ * Verify Ticket QR
+ * ------------------------------------------------------------
+ *
+ * POST /api/v1/tickets/verify
+ *
+ * Body:
+ *
+ * {
+ *   "qrPayload": "..."
+ * }
+ *
+ * Public verification allows a QR scanner to verify
+ * whether a Scintillace ticket is valid.
+ *
+ * IMPORTANT:
+ *
+ * Verification does NOT check the participant in.
+ *
+ * Check-in is performed separately through:
+ *
+ * PATCH /api/v1/tickets/:id/check-in
+ */
+
+router.post(
+  "/verify",
+  qrPayloadValidator,
+  validateRequest,
+  ticketController.verifyQrToken,
+);
+
+/**
+ * ------------------------------------------------------------
+ * Get Ticket By Number
+ * ------------------------------------------------------------
+ *
+ * GET /api/v1/tickets/number/:ticketNumber
+ */
+
+router.get(
+  "/number/:ticketNumber",
+  ticketNumberValidator,
+  validateRequest,
+  ticketController.getTicketByNumber,
+);
+
+/**
+ * ============================================================
+ * Authenticated User Routes
+ * ============================================================
+ */
+
+/**
+ * ------------------------------------------------------------
+ * Get My Tickets
+ * ------------------------------------------------------------
+ *
+ * GET /api/v1/tickets/me
+ */
+
+router.get(
+  "/me",
+  authenticate,
+  ticketQueryValidator,
+  validateRequest,
+  ticketController.getMyTickets,
+);
+
+/**
+ * ============================================================
+ * Administrative / Staff Routes
+ * ============================================================
+ */
+
+/**
+ * ------------------------------------------------------------
+ * Get All Tickets
+ * ------------------------------------------------------------
+ *
+ * GET /api/v1/tickets
+ */
+
+router.get(
+  "/",
+  authenticate,
+  authorize(
+    ROLES.SUPER_ADMIN,
+    ROLES.FACULTY,
+  ),
+  ticketQueryValidator,
+  validateRequest,
+  ticketController.getAllTickets,
+);
+
+/**
+ * ------------------------------------------------------------
+ * Get Tickets By Event - Check-ins
+ * ------------------------------------------------------------
+ *
+ * IMPORTANT:
+ *
+ * This route must be declared before:
+ *
+ * /event/:eventId
+ *
+ * GET /api/v1/tickets/event/:eventId/check-ins
+ */
+
+router.get(
+  "/event/:eventId/check-ins",
+  authenticate,
+  authorize(
+    ROLES.SUPER_ADMIN,
+    ROLES.FACULTY,
+    ROLES.VOLUNTEER,
+  ),
+  eventTicketValidator,
+  validateRequest,
+  ticketController.getCheckedInTickets,
+);
+
+/**
+ * ------------------------------------------------------------
+ * Get Tickets By Event
+ * ------------------------------------------------------------
+ *
+ * GET /api/v1/tickets/event/:eventId
+ */
+
+router.get(
+  "/event/:eventId",
+  authenticate,
+  authorize(
+    ROLES.SUPER_ADMIN,
+    ROLES.FACULTY,
+    ROLES.VOLUNTEER,
+  ),
+  eventTicketValidator,
+  validateRequest,
+  ticketController.getTicketsByEvent,
+);
+
+/**
+ * ------------------------------------------------------------
+ * Get Tickets By Festival
+ * ------------------------------------------------------------
+ *
+ * GET /api/v1/tickets/festival/:festivalId
+ */
+
+router.get(
+  "/festival/:festivalId",
+  authenticate,
+  authorize(
+    ROLES.SUPER_ADMIN,
+    ROLES.FACULTY,
+    ROLES.VOLUNTEER,
+  ),
+  festivalTicketValidator,
+  validateRequest,
+  ticketController.getTicketsByFestival,
+);
+
+/**
+ * ------------------------------------------------------------
+ * Get Ticket QR
+ * ------------------------------------------------------------
+ *
+ * Must be declared before /:id.
+ *
+ * GET /api/v1/tickets/:id/qr
+ */
+
+router.get(
+  "/:id/qr",
+  authenticate,
+  ticketIdValidator,
+  validateRequest,
+  ticketController.getTicketQR,
+);
+
+/**
+ * ------------------------------------------------------------
+ * Get Ticket By ID
+ * ------------------------------------------------------------
+ *
+ * GET /api/v1/tickets/:id
+ */
+
+router.get(
+  "/:id",
+  authenticate,
+  authorize(
+    ROLES.SUPER_ADMIN,
+    ROLES.FACULTY,
+    ROLES.VOLUNTEER,
+  ),
+  ticketIdValidator,
+  validateRequest,
+  ticketController.getTicketById,
+);
+
+/**
+ * ------------------------------------------------------------
+ * Create Ticket
+ * ------------------------------------------------------------
+ *
+ * POST /api/v1/tickets
+ *
+ * Normally tickets should be generated by the registration /
+ * payment workflow.
+ *
+ * This endpoint is retained for authorized
+ * administrative generation.
+ */
+
+router.post(
+  "/",
+  authenticate,
+  authorize(
+    ROLES.SUPER_ADMIN,
+    ROLES.FACULTY,
+  ),
+  createTicketValidator,
+  validateRequest,
+  ticketController.createTicket,
+);
+
+/**
+ * ------------------------------------------------------------
+ * Check In Ticket
+ * ------------------------------------------------------------
+ *
+ * PATCH /api/v1/tickets/:id/check-in
+ *
+ * Protected:
+ *
+ * Super Admin
+ * Faculty
+ * Volunteer
+ */
+
+router.patch(
+  "/:id/check-in",
+  authenticate,
+  authorize(
+    ROLES.SUPER_ADMIN,
+    ROLES.FACULTY,
+    ROLES.VOLUNTEER,
+  ),
+  ticketIdValidator,
+  validateRequest,
+  ticketController.checkInTicket,
+);
+
+/**
+ * ------------------------------------------------------------
+ * Cancel Ticket
+ * ------------------------------------------------------------
+ *
+ * PATCH /api/v1/tickets/:id/cancel
+ *
+ * Protected:
+ *
+ * Super Admin
+ * Faculty
+ */
+
+/**
+ * ------------------------------------------------------------
+ * Expire Ticket
+ * ------------------------------------------------------------
+ *
+ * PATCH /api/v1/tickets/:id/expire
+ *
+ * Protected:
+ *
+ * Super Admin
+ * Faculty
+ */
+
+router.patch(
+  "/:id/expire",
+  authenticate,
+  authorize(
+    ROLES.SUPER_ADMIN,
+    ROLES.FACULTY,
+  ),
+  ticketIdValidator,
+  validateRequest,
+  ticketController.expireTicket,
+);
+
+/**
+ * ------------------------------------------------------------
+ * Delete Ticket
+ * ------------------------------------------------------------
+ *
+ * DELETE /api/v1/tickets/:id
+ *
+ * Protected:
+ *
+ * Super Admin
+ */
+
+router.delete(
+  "/:id",
+  authenticate,
+  authorize(
+    ROLES.SUPER_ADMIN,
+  ),
+  ticketIdValidator,
+  validateRequest,
+  ticketController.deleteTicket,
+);
+
+export default router;

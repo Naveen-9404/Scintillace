@@ -1,0 +1,1 @@
+export const ENDPOINTS = Object.freeze({ auth: { login: '/auth/login', register: '/auth/register', refresh: '/auth/refresh' }, festivals: '/festivals', events: '/events', users: '/users', registrations: '/registrations', teams: '/teams' });

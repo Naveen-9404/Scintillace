@@ -1,0 +1,1 @@
+export function FormField({ label, error, children }) { return <label className="block text-sm font-medium">{label}{children}{error && <span className="mt-1 block text-xs text-red-400">{error}</span>}</label>; }
