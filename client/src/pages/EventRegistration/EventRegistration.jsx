@@ -12,9 +12,9 @@ import {
 import {
   FaArrowLeft,
   FaCalendarAlt,
-  FaClock,
   FaRupeeSign,
   FaUsers,
+  FaCheckCircle,
 } from "react-icons/fa";
 
 import {
@@ -26,35 +26,28 @@ import {
 } from "../../api/registrations.api";
 
 import {
-  createEventPaymentOrder,
-  verifyPayment,
-} from "../../api/payments";
-
-import {
   getMyTickets,
   getTicketQR,
 } from "../../api/tickets.api";
 
-import {
-  loadRazorpay,
-} from "../../utils/razorpay";
+import { useAuth } from "../../hooks/useAuth";
+import usersApi from "../../api/users";
+import * as teamsApi from "../../api/teams.api";
 
-import {
-  useAuth,
-} from "../../hooks/useAuth";
 
-import TeamRegistration from "../../components/events/TeamRegistration";
+
 
 import RegistrationSuccess from "../../components/events/RegistrationSuccess";
+
+import EventPoster from "../../components/sections/Events/EventPoster";
+
+import PaymentProofUpload from "../../components/events/PaymentProofUpload";
 
 /**
  * ============================================================
  * Default Poster
  * ============================================================
  */
-
-const DEFAULT_POSTER =
-  "https://images.unsplash.com/photo-1511578314322-379afb476865?w=1600&auto=format&fit=crop&q=80";
 
 /**
  * ============================================================
@@ -91,14 +84,13 @@ export default function EventRegistration() {
   const navigate =
     useNavigate();
 
-  const { user } =
-    useAuth();
-
   /**
    * ==========================================================
    * State
    * ==========================================================
    */
+
+  const { user } = useAuth();
 
   const [event, setEvent] =
     useState(null);
@@ -118,14 +110,48 @@ export default function EventRegistration() {
   const [qrCode, setQrCode] =
     useState("");
 
-  /**
-   * ==========================================================
-   * Selected team for TEAM events.
-   * ==========================================================
-   */
-
-  const [selectedTeamId, setSelectedTeamId] =
+  const [paymentScreenshot, setPaymentScreenshot] =
     useState(null);
+
+  const [registrationPending, setRegistrationPending] =
+    useState(false);
+
+  const [isConfirmed, setIsConfirmed] = 
+    useState(false);
+
+  const [teamName, setTeamName] = useState("");
+  const [participants, setParticipants] = useState([
+    {
+      fullName: user?.fullName || "",
+      email: user?.email || "",
+      phone: user?.phone || user?.mobileNumber || "",
+      collegeId: user?.collegeId || user?.college || "",
+      department: "",
+      yearOfStudy: "",
+    }
+  ]);
+
+  useEffect(() => {
+    if (event && event.type === "TEAM") {
+      const max = event.teamSize || 2;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setParticipants(prev => {
+        const next = [...prev];
+        while (next.length < max) {
+          next.push({ fullName: "", email: "", phone: "", collegeId: "", department: "", yearOfStudy: "" });
+        }
+        return next;
+      });
+    }
+  }, [event]);
+
+  const handleParticipantChange = (index, field, value) => {
+    setParticipants(prev => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: value };
+      return next;
+    });
+  };
 
   /**
    * ==========================================================
@@ -263,136 +289,7 @@ export default function EventRegistration() {
       );
     };
 
-  /**
-   * ==========================================================
-   * Open Razorpay
-   * ==========================================================
-   */
 
-  const openPayment =
-    async (order) => {
-      const loaded =
-        await loadRazorpay();
-
-      if (!loaded) {
-        throw new Error(
-          "Unable to load Razorpay Checkout. Please try again.",
-        );
-      }
-
-      return new Promise(
-        (
-          resolve,
-          reject,
-        ) => {
-          const razorpay =
-            new window.Razorpay({
-              key: order.keyId,
-
-              /**
-               * Backend amount is INR.
-               * Razorpay expects paise.
-               */
-
-              amount:
-                Number(order.amount) *
-                100,
-
-              currency:
-                order.currency,
-
-              name:
-                "Scintillace",
-
-              description:
-                event?.title ||
-                "Event Registration",
-
-              order_id:
-                order.orderId,
-
-              prefill: {
-                name:
-                  user?.fullName ||
-                  "",
-
-                email:
-                  user?.email ||
-                  "",
-
-                contact:
-                  user?.phone ||
-                  "",
-              },
-
-              notes: {
-                eventId:
-                  event?._id ||
-                  eventId,
-              },
-
-              theme: {
-                color:
-                  "#7c3aed",
-              },
-
-              handler:
-                async (
-                  response,
-                ) => {
-                  try {
-                    await verifyPayment({
-                      razorpay_order_id:
-                        response.razorpay_order_id,
-
-                      razorpay_payment_id:
-                        response.razorpay_payment_id,
-
-                      razorpay_signature:
-                        response.razorpay_signature,
-                    });
-
-                    resolve(
-                      response,
-                    );
-                  } catch (
-                    verificationError
-                  ) {
-                    reject(
-                      verificationError,
-                    );
-                  }
-                },
-
-              modal: {
-                ondismiss:
-                  () => {
-                    reject(
-                      new Error(
-                        "Payment was cancelled.",
-                      ),
-                    );
-                  },
-              },
-            });
-
-          razorpay.on(
-            "payment.failed",
-            (response) => {
-              reject(
-                new Error(
-                  response?.error
-                    ?.description ||
-                    "Payment failed.",
-                ),
-              );
-            },
-          );
-
-          razorpay.open();
-        },
-      );
-    };
 
   /**
    * ==========================================================
@@ -430,35 +327,70 @@ export default function EventRegistration() {
        * --------------------------------------------------------
        */
 
-      if (
-        isTeamEvent &&
-        !selectedTeamId
-      ) {
-        setError(
-          "Please create or join a team before continuing.",
-        );
+      const isPaidEvent = event.isPaid || event.title?.toLowerCase().includes("workshop") || event.title?.toLowerCase().includes("paper") || event.title?.toLowerCase().includes("poster") || event.title?.toLowerCase().includes("hardware");
 
+
+      if (isPaidEvent && !paymentScreenshot) {
+        setError("Payment screenshot is required for paid events.");
         return;
+      }
+
+      if (isTeamEvent) {
+        if (!teamName.trim()) {
+          setError("Team Name is required.");
+          return;
+        }
+        for (let i = 0; i < participants.length; i++) {
+           const p = participants[i];
+           if (!p.fullName || !p.email || !p.phone || !p.collegeId || !p.department || !p.yearOfStudy) {
+              setError(`Please fill all required details for Participant ${i + 1}`);
+              return;
+           }
+        }
+      } else {
+         const p = participants[0];
+         if (!p.fullName || !p.email || !p.phone || !p.collegeId || !p.department || !p.yearOfStudy) {
+            setError("Please fill in all required participant details.");
+            return;
+         }
       }
 
       try {
         setProcessing(true);
         setError("");
 
-        /**
-         * ------------------------------------------------------
-         * 1. CREATE REGISTRATION
-         * ------------------------------------------------------
-         */
+        let finalTeamId = null;
+        if (isTeamEvent) {
+          const team = await teamsApi.createTeamBulk({
+            eventId,
+            teamName,
+            participants,
+          });
+          finalTeamId = team._id;
+        } else {
+          try {
+            await usersApi.updateProfile({
+              fullName: participants[0].fullName,
+              phone: participants[0].phone,
+              collegeId: participants[0].collegeId,
+            });
+          } catch (updateErr) {
+            console.error("Failed to update profile:", updateErr);
+          }
+        }
 
-        const registrationPayload =
-          {
-            event: eventId,
-          };
+        const registrationPayload = {
+          event: eventId,
+        };
 
         if (isTeamEvent) {
-          registrationPayload.teamId =
-            selectedTeamId;
+          registrationPayload.teamId = finalTeamId;
+        }
+
+
+        if (isPaidEvent && paymentScreenshot) {
+          registrationPayload.screenshotUrl = paymentScreenshot.url;
+          registrationPayload.screenshotPublicId = paymentScreenshot.publicId;
         }
 
         const result =
@@ -475,57 +407,18 @@ export default function EventRegistration() {
           );
         }
 
-        /**
-         * ------------------------------------------------------
-         * 2. CHECK WHETHER PAYMENT IS REQUIRED
-         * ------------------------------------------------------
-         *
-         * The registration backend already determines this.
-         */
-
         const paymentRequired =
           Boolean(
             result?.paymentRequired,
           );
 
-        /**
-         * ------------------------------------------------------
-         * 3. PAYMENT
-         * ------------------------------------------------------
-         */
-
         if (paymentRequired) {
-          const order =
-            await createEventPaymentOrder(
-              registration._id,
-            );
-
-          if (
-            !order?.orderId ||
-            !order?.keyId
-          ) {
-            throw new Error(
-              "Payment order was not created correctly.",
-            );
-          }
-
-          await openPayment(
-            order,
+          setRegistrationPending(true);
+        } else {
+          await loadRegistrationTicket(
+            registration._id,
           );
         }
-
-        /**
-         * ------------------------------------------------------
-         * 4. LOAD TICKET
-         * ------------------------------------------------------
-         *
-         * For paid events, the backend creates the ticket
-         * after successful payment verification.
-         */
-
-        await loadRegistrationTicket(
-          registration._id,
-        );
       } catch (err) {
         console.error(
           "Event registration failed:",
@@ -617,6 +510,34 @@ export default function EventRegistration() {
     );
   }
 
+  if (registrationPending) {
+    return (
+      <section className="min-h-screen bg-zinc-950 px-6 py-20 text-white">
+        <div className="mx-auto max-w-2xl text-center mt-20">
+          <div className="mx-auto mb-8 flex h-24 w-24 items-center justify-center rounded-full bg-violet-600/20 text-5xl text-violet-500 ring-4 ring-violet-500/30">
+            <FaCheckCircle />
+          </div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-5xl mb-4">
+            Registration Submitted!
+          </h1>
+          <p className="text-lg text-zinc-400 mb-2">
+            Your payment is pending verification.
+          </p>
+          <p className="text-zinc-500">
+            Your registration will be confirmed and your ticket will be generated after the organizers verify your payment.
+          </p>
+          <button
+            onClick={() => navigate(`/events/${eventId}`)}
+            className="mt-10 inline-flex items-center gap-2 rounded-xl bg-zinc-800 px-6 py-3 font-semibold text-white transition hover:bg-zinc-700"
+          >
+            <FaArrowLeft />
+            Back to Event
+          </button>
+        </div>
+      </section>
+    );
+  }
+
   /**
    * ==========================================================
    * Event Information
@@ -641,17 +562,6 @@ export default function EventRegistration() {
           },
         )
       : "Date unavailable";
-
-  const eventTime =
-    startDate
-      ? startDate.toLocaleTimeString(
-          "en-IN",
-          {
-            hour: "2-digit",
-            minute: "2-digit",
-          },
-        )
-      : "Time unavailable";
 
   const registrationFee =
     Number(
@@ -708,18 +618,9 @@ export default function EventRegistration() {
               Poster
               ================================================== */}
 
-          <img
-            src={
-              event.poster ||
-              event.posterUrl ||
-              DEFAULT_POSTER
-            }
-            alt={
-              event.title ||
-              "Event"
-            }
-            className="h-64 w-full object-cover md:h-80"
-          />
+          <div className="h-64 w-full md:h-80">
+            <EventPoster event={event} />
+          </div>
 
           <div className="p-6 md:p-10">
 
@@ -762,20 +663,6 @@ export default function EventRegistration() {
 
                 <p className="mt-1 font-semibold">
                   {eventDate}
-                </p>
-              </div>
-
-              {/* Time */}
-
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5">
-                <FaClock className="text-violet-400" />
-
-                <p className="mt-3 text-sm text-zinc-500">
-                  Time
-                </p>
-
-                <p className="mt-1 font-semibold">
-                  {eventTime}
                 </p>
               </div>
 
@@ -823,36 +710,169 @@ export default function EventRegistration() {
 
             </div>
 
+            
             {/* =================================================
-                Team Registration
+                Participant & Team Details
                 ================================================= */}
 
-            {isTeamEvent &&
-              canRegister && (
-                <div className="mt-8">
-                  <div className="mb-4">
-                    <h2 className="text-xl font-bold text-white">
-                      Team Registration
-                    </h2>
-
-                    <p className="mt-1 text-sm text-zinc-500">
-                      Create a new team or join
-                      an existing team before
-                      registering for this event.
-                    </p>
-                  </div>
-
-                  <TeamRegistration
-                    event={event}
-                    selectedTeamId={
-                      selectedTeamId
-                    }
-                    onTeamSelected={
-                      setSelectedTeamId
-                    }
-                  />
+            {canRegister && (
+              <div className="mt-8 border-t border-zinc-800 pt-8">
+                <div className="mb-6">
+                  <h2 className="text-xl font-bold text-white">
+                    {isTeamEvent ? "Team Details" : "Participant Details"}
+                  </h2>
                 </div>
-              )}
+                
+                {isTeamEvent && (
+                  <div className="mb-8">
+                    <label className="text-sm font-medium text-zinc-400 mb-2 block">Team Name *</label>
+                    <input 
+                      type="text"
+                      value={teamName}
+                      onChange={(e) => setTeamName(e.target.value)}
+                      placeholder="Enter team name"
+                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-white focus:border-violet-500"
+                    />
+                  </div>
+                )}
+
+                <div className="flex flex-col gap-6">
+                  {participants.map((p, index) => (
+                    <div key={index} className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-6">
+                      <h3 className="text-lg font-semibold text-white mb-4 border-b border-zinc-800 pb-2">
+                        {isTeamEvent ? `PARTICIPANT ${index + 1}${index === 0 ? " — TEAM LEADER" : ""}` : "Details"}
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-xs text-zinc-400 font-medium">Full Name *</label>
+                          <input type="text" value={p.fullName} onChange={(e) => handleParticipantChange(index, "fullName", e.target.value)} className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-white focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500" />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-xs text-zinc-400 font-medium">Email *</label>
+                          <input type="email" value={p.email} disabled={index === 0} onChange={(e) => handleParticipantChange(index, "email", e.target.value)} className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-white focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500 disabled:opacity-50" />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-xs text-zinc-400 font-medium">Mobile Number *</label>
+                          <input type="tel" value={p.phone} onChange={(e) => handleParticipantChange(index, "phone", e.target.value)} className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-white focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500" />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-xs text-zinc-400 font-medium">College / Institution *</label>
+                          <input type="text" value={p.collegeId} onChange={(e) => handleParticipantChange(index, "collegeId", e.target.value)} className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-white focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500" />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-xs text-zinc-400 font-medium">Department *</label>
+                          <input type="text" value={p.department} onChange={(e) => handleParticipantChange(index, "department", e.target.value)} className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-white focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500" />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-xs text-zinc-400 font-medium">Year of Study *</label>
+                          <select value={p.yearOfStudy} onChange={(e) => handleParticipantChange(index, "yearOfStudy", e.target.value)} className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-white focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500">
+                            <option value="" disabled>Select year</option>
+                            <option value="1st Year">1st Year</option>
+                            <option value="2nd Year">2nd Year</option>
+                            <option value="3rd Year">3rd Year</option>
+                            <option value="4th Year">4th Year</option>
+                            <option value="5th Year">5th Year</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* =================================================
+                Payment Section
+                ================================================= */}
+
+
+            {canRegister && (event.isPaid || event.title?.toLowerCase().includes("workshop") || event.title?.toLowerCase().includes("paper") || event.title?.toLowerCase().includes("poster") || event.title?.toLowerCase().includes("hardware")) && (
+              <div className="mt-8 border-t border-zinc-800 pt-8">
+                <div className="mb-6">
+                  <h2 className="text-xl font-bold text-white mb-2">
+                    Payment Details
+                  </h2>
+                  <p className="text-sm text-zinc-400">
+                    Please scan the QR code to pay the registration fee of <span className="font-bold text-white">₹{registrationFee}</span>. You must upload a screenshot of your successful transaction.
+                  </p>
+                </div>
+                
+                <div className="flex flex-col md:flex-row gap-8 items-start">
+                  <div className="w-full md:w-1/3 shrink-0 flex flex-col items-center bg-white p-4 rounded-xl shadow-lg border border-zinc-200">
+                    {(() => {
+                      let qrUrl = null;
+                      let upiId = null;
+                      let label = null;
+                      
+                      if (event.title?.toLowerCase().includes("workshop")) {
+                        qrUrl = import.meta.env.VITE_WORKSHOP_UPI_QR_URL;
+                        upiId = "vallabhravula1821-1@oksbi";
+                        label = "₹600 / Individual";
+                      } else if (event.title?.toLowerCase().includes("paper")) {
+                        qrUrl = import.meta.env.VITE_PAPER_PRESENTATION_UPI_QR_URL;
+                        upiId = "p6263919@okhdfcbank";
+                        label = "₹200 / Team";
+                      } else if (event.title?.toLowerCase().includes("poster")) {
+                        qrUrl = import.meta.env.VITE_POSTER_PRESENTATION_UPI_QR_URL;
+                        upiId = "shafanashaik2006-1@oksbi";
+                        label = "₹200 / Team";
+                      } else if (event.title?.toLowerCase().includes("hardware")) {
+                        qrUrl = import.meta.env.VITE_HARDWARE_EXPO_UPI_QR_URL;
+                        upiId = "manasa08016@okicici";
+                        label = "₹300 / Team";
+                      }
+                      
+                      return qrUrl ? (
+                        <>
+                          <img 
+                            src={qrUrl} 
+                            alt="Official UPI QR Code" 
+                            className="w-full aspect-square object-contain"
+                          />
+                          {upiId && (
+                            <p className="mt-2 text-xs text-gray-500 font-mono tracking-wide">{upiId}</p>
+                          )}
+                          <p className="mt-2 text-black font-semibold text-lg">{label || `₹${registrationFee}`}</p>
+                        </>
+                      ) : (
+                        <div className="w-full aspect-square bg-gray-100 flex items-center justify-center text-center p-4 rounded-lg">
+                          <p className="text-gray-500 text-sm font-medium">QR Code not configured.</p>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                  
+                  <div className="w-full md:w-2/3">
+                    <PaymentProofUpload 
+                      onUploadComplete={setPaymentScreenshot}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* =================================================
+                Confirmation
+                ================================================= */}
+
+            {canRegister && (
+              <div className="mt-8 border-t border-zinc-800 pt-8">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <div className="flex items-center h-6">
+                    <input
+                      type="checkbox"
+                      checked={isConfirmed}
+                      onChange={(e) => setIsConfirmed(e.target.checked)}
+                      className="w-5 h-5 rounded border-zinc-700 bg-zinc-900 text-violet-600 focus:ring-violet-600 focus:ring-offset-zinc-950"
+                    />
+                  </div>
+                  <span className="text-sm text-zinc-300 select-none pt-0.5">
+                    I confirm that the above information is correct and that I have completed the payment.
+                  </span>
+                </label>
+              </div>
+            )}
 
             {/* =================================================
                 Error
@@ -883,39 +903,19 @@ export default function EventRegistration() {
                 ================================================= */}
 
             {canRegister && (
-              <button
-                type="button"
-                disabled={
-                  processing ||
-                  (isTeamEvent &&
-                    !selectedTeamId)
-                }
-                onClick={
-                  handleRegister
-                }
-                className="
-                  mt-8
-                  w-full
-                  rounded-xl
-                  bg-violet-600
-                  px-6
-                  py-4
-                  text-base
-                  font-bold
-                  text-white
-                  transition
-                  hover:bg-violet-700
-                  disabled:cursor-not-allowed
-                  disabled:opacity-50
-                  md:text-lg
-                "
-              >
-                {processing
-                  ? "Processing..."
-                  : isTeamEvent
-                    ? `Register Team & Pay ₹${registrationFee}`
-                    : `Register & Pay ₹${registrationFee}`}
-              </button>
+              <div className="mt-8">
+                <button
+                  onClick={handleRegister}
+                  disabled={processing || !isConfirmed || ((event.isPaid || event.title?.toLowerCase().includes("workshop") || event.title?.toLowerCase().includes("paper") || event.title?.toLowerCase().includes("poster") || event.title?.toLowerCase().includes("hardware")) && !paymentScreenshot) }
+                  className="w-full rounded-xl bg-violet-600 py-4 font-bold text-white transition hover:bg-violet-700 disabled:opacity-50"
+                >
+                  {processing
+                    ? "Processing..."
+                    : (event.isPaid || event.title?.toLowerCase().includes("workshop") || event.title?.toLowerCase().includes("paper") || event.title?.toLowerCase().includes("poster") || event.title?.toLowerCase().includes("hardware"))
+                      ? `Submit Registration`
+                      : "Register Now"}
+                </button>
+              </div>
             )}
 
           </div>

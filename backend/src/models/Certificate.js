@@ -80,7 +80,6 @@ const certificateSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "Registration",
       required: true,
-      unique: true,
       index: true,
     },
 
@@ -379,6 +378,16 @@ certificateSchema.index({
   festival: 1,
   event: 1,
 });
+
+certificateSchema.index(
+  {
+    registration: 1,
+    user: 1,
+  },
+  {
+    unique: true,
+  }
+);
 
 certificateSchema.index({
   status: 1,

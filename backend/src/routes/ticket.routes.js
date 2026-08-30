@@ -17,6 +17,7 @@ import {
   festivalTicketValidator,
   ticketQueryValidator,
 } from "../validators/ticket.validator.js";
+import { qrScannerLimiter } from "../middlewares/rateLimiters.js";
 
 const router = express.Router();
 
@@ -53,6 +54,7 @@ const router = express.Router();
 
 router.post(
   "/verify",
+  qrScannerLimiter,
   qrPayloadValidator,
   validateRequest,
   ticketController.verifyQrToken,
@@ -68,6 +70,7 @@ router.post(
 
 router.get(
   "/number/:ticketNumber",
+  qrScannerLimiter,
   ticketNumberValidator,
   validateRequest,
   ticketController.getTicketByNumber,

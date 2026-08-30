@@ -10,83 +10,10 @@ import paymentValidator from "../validators/payment.validator.js";
 
 import ROLES from "../constants/roles.js";
 
+import { paymentOrderLimiter, paymentVerifyLimiter } from "../middlewares/rateLimiters.js";
+
 const router = Router();
 
-/**
- * ============================================================
- * PAYMENT CREATION ROUTES
- * ============================================================
- */
-
-/**
- * Create Event Payment Order
- *
- * POST /api/v1/payments/event/create-order
- */
-router.post(
-  "/event/create-order",
-  authenticate,
-  authorize(
-    ROLES.STUDENT,
-    ROLES.SUPER_ADMIN,
-  ),
-  ...paymentValidator.createEventOrder,
-  validateRequest,
-  paymentController.createEventOrder,
-);
-
-/**
- * Create Accommodation Payment Order
- *
- * POST /api/v1/payments/accommodation/create-order
- */
-router.post(
-  "/accommodation/create-order",
-  authenticate,
-  authorize(
-    ROLES.STUDENT,
-    ROLES.SUPER_ADMIN,
-  ),
-  ...paymentValidator.createAccommodationOrder,
-  validateRequest,
-  paymentController.createAccommodationOrder,
-);
-
-/**
- * ============================================================
- * PAYMENT VERIFICATION
- * ============================================================
- */
-
-/**
- * Verify Razorpay Payment
- *
- * POST /api/v1/payments/verify
- */
-router.post(
-  "/verify",
-  authenticate,
-  ...paymentValidator.verifyPayment,
-  validateRequest,
-  paymentController.verifyPayment,
-);
-
-/**
- * ============================================================
- * RAZORPAY WEBHOOK
- * ============================================================
- *
- * POST /api/v1/payments/webhook
- *
- * IMPORTANT:
- * No authentication.
- *
- * Razorpay calls this endpoint directly.
- */
-router.post(
-  "/webhook",
-  paymentController.handleWebhook,
-);
 
 /**
  * ============================================================
@@ -130,45 +57,6 @@ router.get(
   paymentController.getAllPayments,
 );
 
-/**
- * ============================================================
- * ADMIN PAYMENT ACTIONS
- * ============================================================
- */
-
-/**
- * Refund Payment
- *
- * POST /api/v1/payments/:paymentId/refund
- */
-router.post(
-  "/:paymentId/refund",
-  authenticate,
-  authorize(
-    ROLES.SUPER_ADMIN,
-    ROLES.FACULTY,
-  ),
-  ...paymentValidator.refundPayment,
-  validateRequest,
-  paymentController.refundPayment,
-);
-
-/**
- * Mark Payment Failed
- *
- * POST /api/v1/payments/:orderId/failed
- */
-router.post(
-  "/:orderId/failed",
-  authenticate,
-  authorize(
-    ROLES.SUPER_ADMIN,
-    ROLES.FACULTY,
-  ),
-  ...paymentValidator.markPaymentFailed,
-  validateRequest,
-  paymentController.markPaymentFailed,
-);
 
 /**
  * Download Payment Receipt

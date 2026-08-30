@@ -271,6 +271,7 @@ export default function AdminCertificates() {
    */
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadFestivals();
   }, [loadFestivals]);
 
@@ -281,6 +282,7 @@ export default function AdminCertificates() {
    */
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadCertificates(
       selectedFestivalId,
     );

@@ -208,7 +208,7 @@ SCINTILLACE Team`,
  * - Hostel preference
  * - Check-in / check-out
  * - Accommodation days
- * - ₹100/day pricing
+ * - ₹200/day pricing
  * - Total amount
  * - Payment information
  * - Confirmation code, when available
@@ -299,15 +299,9 @@ Amount Paid: ${
           0
         }
 
-Payment ID: ${
-          paymentId ||
-          "N/A"
-        }
+Payment Method: UPI
 
-Order ID: ${
-          orderId ||
-          "N/A"
-        }
+Payment Status: VERIFIED
 
 Accommodation Booking ID: ${
           accommodationId ||
@@ -442,22 +436,16 @@ SCINTILLACE Team`,
 
             <p>
               <strong>
-                Payment ID:
+                Payment Method:
               </strong>
-              ${
-                paymentId ||
-                "N/A"
-              }
+              UPI
             </p>
 
             <p>
               <strong>
-                Order ID:
+                Payment Status:
               </strong>
-              ${
-                orderId ||
-                "N/A"
-              }
+              VERIFIED
             </p>
 
             <p>

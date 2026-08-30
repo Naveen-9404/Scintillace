@@ -5,6 +5,7 @@ import {
   EVENT_TYPES,
   EVENT_STATUS,
   EVENT_REGISTRATION_MODES,
+  EVENT_REGISTRATION_METHODS,
 } from "../constants/event.constants.js";
 
 const { Schema, model } = mongoose;
@@ -89,6 +90,23 @@ const eventSchema = new Schema(
      * Registration Configuration
      * ========================================================
      */
+
+    registrationMethod: {
+      type: String,
+      enum: Object.values(
+        EVENT_REGISTRATION_METHODS,
+      ),
+      default:
+        EVENT_REGISTRATION_METHODS.SYSTEM,
+      required: true,
+      index: true,
+    },
+
+    googleFormUrl: {
+      type: String,
+      trim: true,
+      default: "",
+    },
 
     registrationMode: {
       type: String,
@@ -461,6 +479,25 @@ eventSchema.pre(
       this.registrationRequired = true;
       this.isPaid = false;
       this.registrationFee = 0;
+    }
+
+    /**
+     * --------------------------------------------------------
+     * Google Form validation
+     * --------------------------------------------------------
+     */
+
+    if (
+      this.registrationMethod ===
+      EVENT_REGISTRATION_METHODS.GOOGLE_FORM
+    ) {
+      if (!this.googleFormUrl) {
+        throw new Error(
+          "A Google Form URL is required when registration method is GOOGLE_FORM.",
+        );
+      }
+    } else {
+      this.googleFormUrl = "";
     }
 
     /**

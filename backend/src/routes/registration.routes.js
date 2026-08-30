@@ -15,6 +15,7 @@ import {
   updateRegistrationStatusValidator,
   updatePaymentStatusValidator,
   registrationQueryValidator,
+  rejectRegistrationValidator,
 } from "../validators/registration.validator.js";
 
 import ROLES from "../constants/roles.js";
@@ -232,7 +233,7 @@ router.patch(
  *
  * This endpoint is primarily for the payment module.
  *
- * In the final production setup, Razorpay verification/webhooks
+ * In the final production setup, Admin verification
  * should be the source that changes payment status rather than
  * allowing arbitrary client-side updates.
  */
@@ -251,6 +252,64 @@ router.patch(
   ...updatePaymentStatusValidator,
   validateRequest,
   registrationController.updatePaymentStatus,
+);
+
+/**
+ * ============================================================
+ * Admin Payment Verification Flow
+ * ============================================================
+ */
+
+/**
+ * Get Payment By Registration
+ *
+ * GET /api/v1/registrations/:id/payment
+ */
+router.get(
+  "/:id/payment",
+  authenticate,
+  authorize(
+    ROLES.SUPER_ADMIN,
+    ROLES.FACULTY,
+  ),
+  ...registrationIdValidator,
+  validateRequest,
+  registrationController.getPaymentByRegistration,
+);
+
+/**
+ * Approve Registration
+ *
+ * POST /api/v1/registrations/:id/approve
+ */
+router.post(
+  "/:id/approve",
+  authenticate,
+  authorize(
+    ROLES.SUPER_ADMIN,
+    ROLES.FACULTY,
+  ),
+  ...registrationIdValidator,
+  validateRequest,
+  registrationController.approveRegistration,
+);
+
+/**
+ * Reject Registration
+ *
+ * POST /api/v1/registrations/:id/reject
+ */
+router.post(
+  "/:id/reject",
+  authenticate,
+  authorize(
+    ROLES.SUPER_ADMIN,
+    ROLES.FACULTY,
+  ),
+  ...registrationIdValidator,
+  ...rejectRegistrationValidator,
+  validateRequest,
+  registrationController.rejectRegistration,
 );
 
 /**

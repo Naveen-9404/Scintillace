@@ -11,10 +11,13 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "seed": "node src/seed/seed.js"
+    "seed": "node src/seed/seed.js",
+    "capacity:backfill": "node src/scripts/backfillEventCapacity.js",
+    "test": "cross-env NODE_ENV=test MONGODB_URI=mongodb://localhost:27017/dummy ACCESS_TOKEN_SECRET=test REFRESH_TOKEN_SECRET=test node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
+    "cloudinary": "^2.11.0",
     "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
@@ -31,16 +34,19 @@
     "pdf-lib": "^1.17.1",
     "pdfkit": "^0.19.1",
     "qrcode": "^1.5.4",
-    "razorpay": "^2.9.8",
     "winston": "^3.19.0",
     "xlsx": "^0.18.5",
     "zod": "^3.25.76"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
+    "cross-env": "^10.1.0",
     "eslint": "^9.31.0",
+    "jest": "^30.4.2",
+    "mongodb-memory-server": "^11.2.0",
     "nodemon": "^3.1.10",
-    "prettier": "^3.6.2"
+    "prettier": "^3.6.2",
+    "supertest": "^7.2.2"
   },
   "engines": {
     "node": ">=22"

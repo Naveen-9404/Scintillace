@@ -1,3 +1,4 @@
+import { Suspense, lazy } from "react";
 import {
   Routes,
   Route,
@@ -11,29 +12,24 @@ import Home from "../pages/Home";
 import About from "../pages/About";
 import Contact from "../pages/Contact";
 
-import Accommodation from "../pages/Accommodation/Accommodation";
+const Accommodation = lazy(() => import("../pages/Accommodation/Accommodation"));
+const Events = lazy(() => import("../pages/Events"));
+const EventRegistration = lazy(() => import("../pages/EventRegistration/EventRegistration"));
+const EventDetails = lazy(() => import("../pages/EventDetails"));
+const Presentations = lazy(() => import("../pages/Presentations/Presentations"));
+const PresentationDetails = lazy(() => import("../pages/PresentationDetails/PresentationDetails"));
+const HardwareExpo = lazy(() => import("../pages/HardwareExpo/HardwareExpo"));
+const Workshop = lazy(() => import("../pages/Workshop/Workshop"));
+const Announcements = lazy(() => import("../pages/Announcements"));
+const Profile = lazy(() => import("../pages/Profile"));
+const MyTickets = lazy(() => import("../pages/Tickets/MyTickets"));
 
-import Events from "../pages/Events";
-import EventDetails from "../pages/EventDetails";
-import EventRegistration from "../pages/EventRegistration/EventRegistration";
+const Login = lazy(() => import("../pages/Login"));
+const Register = lazy(() => import("../pages/Register"));
 
-import Presentations from "../pages/Presentations/Presentations";
-import PresentationDetails from "../pages/PresentationDetails/PresentationDetails";
-
-import HardwareExpo from "../pages/HardwareExpo/HardwareExpo";
-import Workshop from "../pages/Workshop/Workshop";
-
-import Announcements from "../pages/Announcements";
-
-import Login from "../pages/Login";
-import Register from "../pages/Register";
-
-import Dashboard from "../pages/Dashboard";
-import Profile from "../pages/Profile";
-import Certificates from "../pages/Certificates";
-import MyTickets from "../pages/Tickets/MyTickets";
-
-import TicketScanner from "../pages/TicketScanner/TicketScanner";
+const Dashboard = lazy(() => import("../pages/Dashboard"));
+const Certificates = lazy(() => import("../pages/Certificates"));
+const TicketScanner = lazy(() => import("../pages/TicketScanner/TicketScanner"));
 
 /**
  * ============================================================
@@ -41,7 +37,7 @@ import TicketScanner from "../pages/TicketScanner/TicketScanner";
  * ============================================================
  */
 
-import Admin from "../pages/admin";
+const Admin = lazy(() => import("../pages/admin"));
 
 /**
  * ============================================================
@@ -81,7 +77,8 @@ import NotFound from "../pages/NotFound";
 
 export function AppRoutes() {
   return (
-    <Routes>
+    <Suspense fallback={<div className="flex justify-center items-center h-screen">Loading...</div>}>
+      <Routes>
 
       {/* =====================================================
           PUBLIC ROUTES
@@ -382,7 +379,8 @@ export function AppRoutes() {
         }
       />
 
-    </Routes>
+      </Routes>
+    </Suspense>
   );
 }
 

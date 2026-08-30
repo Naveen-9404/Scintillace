@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import ApiError from "../utils/ApiError.js";
 import HTTP_STATUS from "../constants/httpStatus.js";
 import env from "../config/env.js";
+import logger from "../config/logger.js";
 
 /**
  * ============================================================
@@ -16,55 +17,6 @@ const errorHandler = (
   res,
   next,
 ) => {
-  console.log(
-    "\n================ ERROR DEBUG ================",
-  );
-
-  console.log(
-    "Error object:",
-    err,
-  );
-
-  console.log(
-    "Error name:",
-    err?.name,
-  );
-
-  console.log(
-    "Error message:",
-    err?.message,
-  );
-
-  console.log(
-    "Error statusCode:",
-    err?.statusCode,
-  );
-
-  console.log(
-    "Error statusCode type:",
-    typeof err?.statusCode,
-  );
-
-  console.log(
-    "Error constructor:",
-    err?.constructor?.name,
-  );
-
-  console.log(
-    "Is ApiError:",
-    err instanceof ApiError,
-  );
-
-  console.log(
-    "Request:",
-    req.method,
-    req.originalUrl,
-  );
-
-  console.log(
-    "==============================================\n",
-  );
-
   let error = err;
 
   /**
@@ -175,9 +127,8 @@ const errorHandler = (
    */
 
   else {
-    console.error(
-      "UNKNOWN ERROR REACHED ERROR HANDLER:",
-      error,
+    logger.error(
+      `UNKNOWN ERROR REACHED ERROR HANDLER: ${error?.message || error}`,
     );
 
     error = new ApiError(
@@ -195,10 +146,11 @@ const errorHandler = (
   if (
     env.nodeEnv !== "test"
   ) {
-    console.error(
-      `[${req.method}] ${req.originalUrl}`,
-      err,
-    );
+    if (env.nodeEnv === "production") {
+      logger.error(`[${req.method}] ${req.originalUrl} - ${err.message}`);
+    } else {
+      logger.error(`[${req.method}] ${req.originalUrl}`, err);
+    }
   }
 
   /**

@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import mongoose from "mongoose";
 
 import teamRepository from "../repositories/team.repository.js";
@@ -436,227 +437,47 @@ const joinTeam = async ({
   inviteCode,
   userId,
 }) => {
-  assertValidObjectId(
-    userId,
-    "user ID",
-  );
+  assertValidObjectId(userId, 'user ID');
+  const normalizedInviteCode = normalizeInviteCode(inviteCode);
 
-  const normalizedInviteCode =
-    normalizeInviteCode(
-      inviteCode,
-    );
+  const user = await User.findById(userId).exec();
+  if (!user) throw new ApiError('User not found.', HTTP_STATUS.NOT_FOUND);
+  if (!user.isActive) throw new ApiError('User account is inactive.', HTTP_STATUS.FORBIDDEN);
 
-  /**
-   * Verify user.
-   */
+  const team = await teamRepository.findByInviteCode(normalizedInviteCode);
+  if (!team) throw new ApiError('Invalid invite code.', HTTP_STATUS.NOT_FOUND);
 
-  const user =
-    await User.findById(
-      userId,
-    ).exec();
-
-  if (!user) {
-    throw new ApiError(
-      "User not found.",
-      HTTP_STATUS.NOT_FOUND,
-    );
+  if (team.members.length >= team.maxMembers) {
+    throw new ApiError(`Maximum team limit exceeded. This team already has ${team.maxMembers} members.`, HTTP_STATUS.BAD_REQUEST);
+  }
+  if (team.status !== TEAM_STATUS.ACTIVE) {
+    throw new ApiError('This team is not accepting new members.', HTTP_STATUS.BAD_REQUEST);
   }
 
-  if (!user.isActive) {
-    throw new ApiError(
-      "User account is inactive.",
-      HTTP_STATUS.FORBIDDEN,
-    );
-  }
+  const event = await eventRepository.findByIdRaw(team.event._id ?? team.event);
+  if (!event) throw new ApiError('Event not found.', HTTP_STATUS.NOT_FOUND);
+  assertTeamRegistrationAvailable(event);
 
-  /**
-   * Find team.
-   */
-
-  const team =
-    await teamRepository.findByInviteCode(
-      normalizedInviteCode,
-    );
-
-  if (!team) {
-    throw new ApiError(
-      "Invalid invite code.",
-      HTTP_STATUS.NOT_FOUND,
-    );
-  }
-
-  /**
-   * Check team state.
-   */
-
-  if (
-  team.members.length >=
-  team.maxMembers
-) {
-  throw new ApiError(
-    `Maximum team limit exceeded. This team already has ${team.maxMembers} members.`,
-    HTTP_STATUS.BAD_REQUEST,
-  );
-}
-
-if (
-  team.status !==
-  TEAM_STATUS.ACTIVE
-) {
-  throw new ApiError(
-    "This team is not accepting new members.",
-    HTTP_STATUS.BAD_REQUEST,
-  );
-}
-
-  /**
-   * Verify event.
-   */
-
-  const event =
-    await eventRepository.findByIdRaw(
-      team.event._id ??
-        team.event,
-    );
-
-  if (!event) {
-    throw new ApiError(
-      "Event not found.",
-      HTTP_STATUS.NOT_FOUND,
-    );
-  }
-
-  assertTeamRegistrationAvailable(
-    event,
-  );
-
-  /**
-   * Check whether the user is already
-   * a member of this exact team.
-   */
-
-  const alreadyMember =
-    team.members.some(
-      (member) => {
-        const memberId =
-          member.user?._id ??
-          member.user;
-
-        return (
-          memberId.toString() ===
-          userId.toString()
-        );
-      },
-    );
-
-  if (alreadyMember) {
-    throw new ApiError(
-      "You are already a member of this team.",
-      HTTP_STATUS.CONFLICT,
-    );
-  }
-
-  /**
-   * Check whether user belongs to another
-   * team for the same event.
-   */
-
-  const existingTeam =
-    await teamRepository.findByEventAndMember(
-      event._id,
-      userId,
-    );
-
+  const existingTeam = await teamRepository.findByEventAndMember(event._id, userId);
   if (existingTeam) {
-    throw new ApiError(
-      "You already belong to another team for this event.",
-      HTTP_STATUS.CONFLICT,
-    );
+    throw new ApiError('You already belong to another team for this event.', HTTP_STATUS.CONFLICT);
   }
 
-  /**
-   * Check capacity.
-   */
-
-  if (
-    team.members.length >=
-    team.maxMembers
-  ) {
-    throw new ApiError(
-      "Team is already full.",
-      HTTP_STATUS.BAD_REQUEST,
-    );
-  }
-
-  /**
-   * Get actual Mongoose document.
-   */
-
-  const teamDocument =
-    await teamRepository.findDocumentById(
-      team._id,
-    );
-
-  if (!teamDocument) {
-    throw new ApiError(
-      "Team not found.",
-      HTTP_STATUS.NOT_FOUND,
-    );
-  }
-
-  /**
-   * Re-check capacity after loading the
-   * actual document.
-   *
-   * This protects against simple race conditions.
-   */
-
-  if (
-    teamDocument.members.length >=
-    teamDocument.maxMembers
-  ) {
-    throw new ApiError(
-      "Team is already full.",
-      HTTP_STATUS.BAD_REQUEST,
-    );
-  }
-
-  /**
-   * Re-check duplicate membership.
-   */
-
-  const memberAlreadyAdded =
-    teamDocument.members.some(
-      (member) =>
-        member.user.toString() ===
-        userId.toString(),
-    );
-
-  if (memberAlreadyAdded) {
-    throw new ApiError(
-      "You are already a member of this team.",
-      HTTP_STATUS.CONFLICT,
-    );
-  }
-
-  teamDocument.members.push({
-    user: userId,
-    role:
-      TEAM_MEMBER_ROLE.MEMBER,
+  // ATOMIC JOIN OPERATION
+  const updatedTeam = await teamRepository.addMemberIfAvailable({
+    teamId: team._id,
+    userId,
+    role: TEAM_MEMBER_ROLE.MEMBER,
   });
 
-  if (
-    teamDocument.members.length >=
-    teamDocument.maxMembers
-  ) {
-    teamDocument.status =
-      TEAM_STATUS.FULL;
+  if (!updatedTeam) {
+    throw new ApiError(
+      'Could not join team. It may be full, inactive, or you are already a member.',
+      HTTP_STATUS.BAD_REQUEST,
+    );
   }
-await teamDocument.save();
 
-  return teamRepository.findById(
-    teamDocument._id,
-  );
+  return updatedTeam;
 };
 
 /**
@@ -1382,16 +1203,133 @@ const getAllTeams = async ({
 const countTeamsByEvent =
   async (
     eventId,
-  ) => {
-    assertValidObjectId(
-      eventId,
-      "event ID",
-    );
+) => {
+  assertValidObjectId(
+    eventId,
+    "event ID",
+  );
 
-    return teamRepository.countByEvent(
-      eventId,
-    );
-  };
+  return teamRepository.count({
+    event: eventId,
+  });
+};
+
+/**
+ * ============================================================
+ * Create Team With Members (Bulk)
+ * ============================================================
+ */
+
+const createTeamWithMembers = async ({
+  leaderId,
+  eventId,
+  teamName,
+  participants = [],
+}) => {
+  assertValidObjectId(leaderId, "leader ID");
+  assertValidObjectId(eventId, "event ID");
+
+  const normalizedTeamName = normalizeTeamName(teamName);
+
+  const leader = await User.findById(leaderId).exec();
+  if (!leader) {
+    throw new ApiError("Leader not found.", HTTP_STATUS.NOT_FOUND);
+  }
+  if (!leader.isActive) {
+    throw new ApiError("Leader account is inactive.", HTTP_STATUS.FORBIDDEN);
+  }
+
+  const event = await eventRepository.findByIdRaw(eventId);
+  if (!event) {
+    throw new ApiError("Event not found.", HTTP_STATUS.NOT_FOUND);
+  }
+
+  assertTeamRegistrationAvailable(event);
+
+  const existingMembership = await teamRepository.findByEventAndMember(
+    eventId,
+    leaderId
+  );
+  if (existingMembership) {
+    throw new ApiError("You already belong to a team for this event.", HTTP_STATUS.CONFLICT);
+  }
+
+  const existingTeam = await teamRepository.findByEventAndName(
+    eventId,
+    normalizedTeamName
+  );
+  if (existingTeam) {
+    throw new ApiError("Team name already exists for this event.", HTTP_STATUS.CONFLICT);
+  }
+
+  const maxMembers = event.teamSize;
+  if (!Number.isInteger(maxMembers) || maxMembers < 2) {
+    throw new ApiError("Invalid team size configured for this event.", HTTP_STATUS.BAD_REQUEST);
+  }
+
+  if (participants.length > maxMembers) {
+    throw new ApiError(`Team size cannot exceed ${maxMembers} members.`, HTTP_STATUS.BAD_REQUEST);
+  }
+
+  const inviteCode = await generateInviteCode();
+  const membersList = [];
+
+  for (let i = 0; i < participants.length; i++) {
+    const p = participants[i];
+    if (!p.email || !p.fullName || !p.phone || !p.collegeId) {
+      throw new ApiError("Missing required participant details.", HTTP_STATUS.BAD_REQUEST);
+    }
+
+    const email = p.email.toLowerCase().trim();
+    let memberUser = await User.findOne({ email }).exec();
+
+    if (!memberUser) {
+      const randomPassword = crypto.randomBytes(16).toString("hex");
+      memberUser = new User({
+        fullName: p.fullName,
+        email,
+        password: randomPassword,
+        phone: p.phone,
+        collegeId: p.collegeId,
+        department: p.department || "",
+        yearOfStudy: p.yearOfStudy || "",
+        role: "STUDENT",
+        isEmailVerified: false,
+        isActive: true,
+      });
+      await memberUser.save();
+    }
+
+    const role = i === 0 ? TEAM_MEMBER_ROLE.LEADER : TEAM_MEMBER_ROLE.MEMBER;
+    membersList.push({
+      user: memberUser._id,
+      role,
+    });
+  }
+
+  try {
+    const team = await teamRepository.create({
+      teamName: normalizedTeamName,
+      leader: leaderId,
+      event: eventId,
+      festival: event.festival,
+      inviteCode,
+      maxMembers,
+      status: TEAM_STATUS.ACTIVE,
+      members: membersList,
+    });
+
+    return team;
+  } catch (error) {
+    if (error.code === 11000) {
+      throw new ApiError(
+        "A team with this name or member configuration already exists.",
+        HTTP_STATUS.CONFLICT
+      );
+    }
+    throw error;
+  }
+};
 
 /**
  * ============================================================
@@ -1401,6 +1339,7 @@ const countTeamsByEvent =
 
 const teamService =
   Object.freeze({
+    createTeamWithMembers,
     createTeam,
     joinTeam,
     leaveTeam,

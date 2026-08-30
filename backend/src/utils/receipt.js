@@ -537,23 +537,19 @@ const generateRegistrationPDF =
             ],
 
             [
-              "Payment ID",
-              safeText(
-                payment.paymentId,
-              ),
+              "Payment Method",
+              "UPI",
             ],
 
             [
-              "Order ID",
-              safeText(
-                payment.orderId,
-              ),
+              "Payment Status",
+              "VERIFIED",
             ],
 
             [
-              "Paid At",
+              "Verified At",
               formatDate(
-                payment.paidAt,
+                payment.paidAt || new Date(),
               ),
             ],
           ];
@@ -1164,33 +1160,21 @@ const generateAccommodationReceiptPDF =
             ],
 
             [
-              "Payment ID",
-              safeText(
-                accommodation.paymentId ||
-                  accommodation.payment?.paymentId,
-              ),
-            ],
-
-            [
-              "Order ID",
-              safeText(
-                accommodation.orderId ||
-                  accommodation.payment?.orderId,
-              ),
-            ],
-
-            [
-              "Paid At",
-              formatDate(
-                accommodation.paidAt ||
-                  accommodation.payment?.paidAt,
-              ),
+              "Payment Method",
+              "UPI",
             ],
 
             [
               "Payment Status",
-              safeText(
-                accommodation.paymentStatus,
+              "VERIFIED",
+            ],
+
+            [
+              "Verified At",
+              formatDate(
+                accommodation.paidAt ||
+                  accommodation.payment?.paidAt ||
+                  new Date(),
               ),
             ],
           ];

@@ -275,6 +275,36 @@ export const markAccommodationPaymentFailed =
 
 /**
  * ============================================================
+ * Reject Accommodation Booking
+ * ============================================================
+ *
+ * PATCH /api/v1/accommodation/:id/reject
+ *
+ * Admin / Faculty route.
+ */
+
+export const rejectAccommodation =
+  async (
+    id,
+    payload = {},
+  ) => {
+    if (!id) {
+      throw new Error(
+        "Accommodation ID is required.",
+      );
+    }
+
+    const { data } =
+      await apiClient.patch(
+        `/v1/accommodation/${id}/reject`,
+        payload,
+      );
+
+    return data?.data || null;
+  };
+
+/**
+ * ============================================================
  * Refund Accommodation Payment
  * ============================================================
  *

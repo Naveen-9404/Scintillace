@@ -281,3 +281,32 @@ export const refundAccommodationValidator = [
       "Invalid refund ID.",
     ),
 ];
+
+/**
+ * ============================================================
+ * Rejection
+ * ============================================================
+ */
+
+export const rejectAccommodationValidator = [
+  param("id")
+    .trim()
+    .notEmpty()
+    .withMessage(
+      "Accommodation ID is required.",
+    )
+    .isMongoId()
+    .withMessage(
+      "Invalid Accommodation ID.",
+    ),
+
+  body("reason")
+    .optional()
+    .trim()
+    .isLength({
+      max: 500,
+    })
+    .withMessage(
+      "Rejection reason cannot exceed 500 characters.",
+    ),
+];

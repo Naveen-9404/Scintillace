@@ -17,6 +17,7 @@ import {
   paymentAccommodationValidator,
   cancelAccommodationValidator,
   refundAccommodationValidator,
+  rejectAccommodationValidator,
 } from "../validators/accommodation.validator.js";
 
 const router = Router();
@@ -219,6 +220,24 @@ router.patch(
   refundAccommodationValidator,
   validate,
   accommodationController.refundAccommodation,
+);
+
+/**
+ * Reject Accommodation Booking
+ *
+ * PATCH /api/v1/accommodation/:id/reject
+ */
+
+router.patch(
+  "/:id/reject",
+  authenticate,
+  authorize(
+    ROLES.SUPER_ADMIN,
+    ROLES.FACULTY,
+  ),
+  rejectAccommodationValidator,
+  validate,
+  accommodationController.rejectAccommodation,
 );
 
 /**

@@ -1,1122 +1,284 @@
-import { useMemo, useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { toast } from "react-hot-toast";
-import {
-  BedDouble,
-  CalendarDays,
-  FileCheck2,
-  ShieldCheck,
-  CheckCircle2,
-} from "lucide-react";
+import { BedDouble, ShieldCheck } from "lucide-react";
+import { FaCalendarAlt, FaRupeeSign, FaSpinner } from "react-icons/fa";
 
-import RegistrationSelect from "./RegistrationSelect";
-import DateSelection from "./DateSelection";
-import BookingSummaryCard from "./BookingSummaryCard";
+import { createAccommodation } from "../../api/accommodation.api";
+import { getMyRegistrations } from "../../api/registrations.api";
+import PaymentProofUpload from "../events/PaymentProofUpload";
 
-import {
-  createAccommodation,
-  getMyAccommodationBookings,
-} from "../../api/accommodation.api";
+const AccommodationForm = ({ selectedRoom, onBookingSuccess }) => {
+  const [registrations, setRegistrations] = useState([]);
+  const [loadingReg, setLoadingReg] = useState(true);
+  const [error, setError] = useState("");
+  const [processing, setProcessing] = useState(false);
 
-import {
-  createAccommodationPaymentOrder,
-  verifyPayment,
-} from "../../api/payments";
+  const [registrationId, setRegistrationId] = useState("");
+  const [checkInDate, setCheckInDate] = useState("");
+  const [checkOutDate, setCheckOutDate] = useState("");
+  const [paymentScreenshot, setPaymentScreenshot] = useState(null);
 
-import { loadRazorpay } from "../../utils/razorpay";
-
-/**
- * ============================================================
- * Accommodation Configuration
- * ============================================================
- *
- * Participants select only their preferred hostel.
- *
- * Actual room/bed allotment is handled offline by the
- * Scintillace accommodation team.
- *
- * Pricing:
- * ₹100 per accommodation day.
- */
-
-const HOSTEL_TYPES = Object.freeze({
-  BOYS: "BOYS",
-  GIRLS: "GIRLS",
-});
-
-const PRICE_PER_DAY = 100;
-
-/**
- * ============================================================
- * Accommodation Form
- * ============================================================
- */
-
-const AccommodationForm = ({
-  selectedRoom,
-  onBookingSuccess,
-}) => {
-  /**
-   * ==========================================================
-   * Form State
-   * ==========================================================
-   */
-
-  const [registrationId, setRegistrationId] =
-    useState("");
-
-  const [checkIn, setCheckIn] =
-    useState("");
-
-  const [checkOut, setCheckOut] =
-    useState("");
-
-  const [remarks, setRemarks] =
-    useState("");
-
-  const [loading, setLoading] =
-    useState(false);
-
-  /**
-   * ==========================================================
-   * Selected Hostel
-   * ==========================================================
-   */
-
-  const hostelType = useMemo(() => {
-    if (
-      selectedRoom === HOSTEL_TYPES.BOYS ||
-      selectedRoom === HOSTEL_TYPES.GIRLS
-    ) {
-      return selectedRoom;
-    }
-
-    return "";
-  }, [selectedRoom]);
-
-  /**
-   * ==========================================================
-   * Accommodation Days
-   * ==========================================================
-   */
-
-  const accommodationDays = useMemo(() => {
-    if (!checkIn || !checkOut) {
-      return 0;
-    }
-
-    const start = new Date(checkIn);
-    const end = new Date(checkOut);
-
-    if (
-      Number.isNaN(start.getTime()) ||
-      Number.isNaN(end.getTime())
-    ) {
-      return 0;
-    }
-
-    const difference =
-      end.getTime() - start.getTime();
-
-    const days = Math.ceil(
-      difference /
-        (1000 * 60 * 60 * 24),
-    );
-
-    return days > 0 ? days : 0;
-  }, [checkIn, checkOut]);
-
-  /**
-   * ==========================================================
-   * Estimated Amount
-   * ==========================================================
-   *
-   * This is only for frontend display.
-   *
-   * Backend remains the source of truth.
-   */
-
-  const totalAmount = useMemo(() => {
-    if (accommodationDays <= 0) {
-      return 0;
-    }
-
-    return (
-      accommodationDays *
-      PRICE_PER_DAY
-    );
-  }, [accommodationDays]);
-
-  /**
-   * ==========================================================
-   * Reset Form
-   * ==========================================================
-   */
-
-  const resetForm = () => {
-    setRegistrationId("");
-    setCheckIn("");
-    setCheckOut("");
-    setRemarks("");
-  };
-
-  /**
-   * ==========================================================
-   * Validation
-   * ==========================================================
-   */
-
-  const validateForm = () => {
-    if (!hostelType) {
-      toast.error(
-        "Please select your preferred hostel.",
-      );
-
-      return false;
-    }
-
-    if (!registrationId) {
-      toast.error(
-        "Please select an event registration.",
-      );
-
-      return false;
-    }
-
-    if (!checkIn) {
-      toast.error(
-        "Please select check-in date.",
-      );
-
-      return false;
-    }
-
-    if (!checkOut) {
-      toast.error(
-        "Please select check-out date.",
-      );
-
-      return false;
-    }
-
-    if (accommodationDays <= 0) {
-      toast.error(
-        "Check-out date must be after check-in date.",
-      );
-
-      return false;
-    }
-
-    return true;
-  };
-
-  /**
-   * ==========================================================
-   * Open Razorpay Checkout
-   * ==========================================================
-   */
-
-  const openAccommodationPayment =
-    async ({
-      order,
-      accommodation,
-    }) => {
-      const loaded =
-        await loadRazorpay();
-
-      if (!loaded) {
-        throw new Error(
-          "Unable to load Razorpay Checkout. Please try again.",
+  useEffect(() => {
+    const fetchRegistrations = async () => {
+      try {
+        setLoadingReg(true);
+        const data = await getMyRegistrations();
+        const activeRegistrations = data.filter(
+          (reg) => reg.status === "REGISTERED"
         );
+        setRegistrations(activeRegistrations);
+        if (activeRegistrations.length === 1) {
+          setRegistrationId(activeRegistrations[0]._id);
+        }
+      } catch (err) {
+        console.error("Failed to load registrations:", err);
+      } finally {
+        setLoadingReg(false);
       }
-
-      if (!order?.orderId) {
-        throw new Error(
-          "Payment order was not created correctly.",
-        );
-      }
-
-      if (!order?.keyId) {
-        throw new Error(
-          "Razorpay key was not returned by the server.",
-        );
-      }
-
-      if (
-        order?.amount === undefined ||
-        order?.amount === null
-      ) {
-        throw new Error(
-          "Payment amount was not returned by the server.",
-        );
-      }
-
-      return new Promise(
-        (
-          resolve,
-          reject,
-        ) => {
-          let settled = false;
-
-          const resolveOnce = (
-            value,
-          ) => {
-            if (settled) {
-              return;
-            }
-
-            settled = true;
-            resolve(value);
-          };
-
-          const rejectOnce = (
-            error,
-          ) => {
-            if (settled) {
-              return;
-            }
-
-            settled = true;
-            reject(error);
-          };
-
-          const razorpay =
-            new window.Razorpay({
-              key: order.keyId,
-
-              /**
-               * Backend amount is INR.
-               * Razorpay expects paise.
-               */
-
-              amount:
-                Number(order.amount) *
-                100,
-
-              currency:
-                order.currency ||
-                "INR",
-
-              name:
-                "Scintillace",
-
-              description:
-                "Accommodation Booking",
-
-              order_id:
-                order.orderId,
-
-              notes: {
-                accommodationId:
-                  accommodation?._id ||
-                  accommodation?.id ||
-                  "",
-
-                hostelType:
-                  accommodation?.hostelType ||
-                  hostelType,
-
-                registrationId:
-                  accommodation?.registration?._id ||
-                  accommodation?.registration?.id ||
-                  accommodation?.registration ||
-                  registrationId,
-              },
-
-              theme: {
-                color:
-                  "#06b6d4",
-              },
-
-              handler:
-                async (
-                  response,
-                ) => {
-                  try {
-                    /**
-                     * =================================================
-                     * Verify Razorpay Payment
-                     * =================================================
-                     */
-
-                    const verification =
-                      await verifyPayment({
-                        razorpay_order_id:
-                          response.razorpay_order_id,
-
-                        razorpay_payment_id:
-                          response.razorpay_payment_id,
-
-                        razorpay_signature:
-                          response.razorpay_signature,
-                      });
-
-                    /**
-                     * Backend verification response
-                     * contains the updated accommodation.
-                     */
-
-                    const paidAccommodation =
-                      verification?.accommodation;
-
-                    if (
-                      !paidAccommodation
-                    ) {
-                      throw new Error(
-                        "Payment was verified, but the updated accommodation booking was not returned.",
-                      );
-                    }
-
-                    /**
-                     * Make sure the backend actually
-                     * marked the accommodation as paid.
-                     */
-
-                    if (
-                      paidAccommodation.paymentStatus !==
-                      "Paid"
-                    ) {
-                      throw new Error(
-                        "Payment verification completed, but accommodation payment status was not updated.",
-                      );
-                    }
-
-                    resolveOnce(
-                      paidAccommodation,
-                    );
-                  } catch (
-                    verificationError
-                  ) {
-                    rejectOnce(
-                      verificationError,
-                    );
-                  }
-                },
-
-              modal: {
-                ondismiss:
-                  () => {
-                    rejectOnce(
-                      new Error(
-                        "Payment was cancelled.",
-                      ),
-                    );
-                  },
-              },
-            });
-
-          /**
-           * =================================================
-           * Razorpay Payment Failure
-           * =================================================
-           */
-
-          razorpay.on(
-            "payment.failed",
-            (response) => {
-              rejectOnce(
-                new Error(
-                  response?.error
-                    ?.description ||
-                    "Payment failed.",
-                ),
-              );
-            },
-          );
-
-          razorpay.open();
-        },
-      );
     };
+    fetchRegistrations();
+  }, []);
 
-  /**
-   * ==========================================================
-   * Submit Accommodation Booking
-   * ==========================================================
-   *
-   * Complete flow:
-   *
-   * 1. Try to create accommodation booking
-   * 2. If already exists, reuse existing booking
-   * 3. Check payment status
-   * 4. Create Razorpay order
-   * 5. Open Razorpay Checkout
-   * 6. Verify payment
-   * 7. Return paid accommodation
-   * 8. Show success modal
-   */
+  const getAmount = () => {
+    if (!checkInDate || !checkOutDate) return 0;
+    const start = new Date(checkInDate);
+    const end = new Date(checkOutDate);
+    
+    // Use UTC to avoid daylight saving time anomalies
+    const utcStart = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate());
+    const utcEnd = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate());
+    
+    const diff = utcEnd - utcStart;
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    
+    return days > 0 ? days * 200 : 0;
+  };
 
-  const handleSubmit = async (
-  event,
-) => {
-  event.preventDefault();
+  const amount = getAmount();
+  
+  // Set min check-in date to today, check-out minimum to check-in + 1 day
+  const todayStr = new Date().toISOString().split("T")[0];
+  const minCheckOutStr = checkInDate 
+    ? new Date(new Date(checkInDate).getTime() + 86400000).toISOString().split("T")[0] 
+    : todayStr;
 
-  if (!validateForm()) {
-    return;
-  }
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
 
-  try {
-    setLoading(true);
-
-    /**
-     * ======================================================
-     * 1. FIND EXISTING ACCOMMODATION FIRST
-     * ======================================================
-     *
-     * Do NOT blindly POST /accommodation.
-     *
-     * The backend correctly rejects duplicate
-     * accommodation bookings with 409 Conflict.
-     *
-     * We avoid that request completely by checking
-     * the user's existing accommodation bookings first.
-     */
-
-    const existingBookings =
-      await getMyAccommodationBookings();
-
-    const existingAccommodation =
-      existingBookings.find(
-        (booking) => {
-          const bookingRegistrationId =
-            booking?.registration?._id ||
-            booking?.registration?.id ||
-            booking?.registration;
-
-          return (
-            bookingRegistrationId &&
-            bookingRegistrationId.toString() ===
-              registrationId.toString()
-          );
-        },
-      );
-
-    let accommodation;
-
-    /**
-     * ======================================================
-     * 2. REUSE EXISTING BOOKING
-     * ======================================================
-     */
-
-    if (existingAccommodation) {
-      accommodation =
-        existingAccommodation;
-
-      console.log(
-        "Existing accommodation found:",
-        accommodation,
-      );
-    } else {
-      /**
-       * ====================================================
-       * 3. CREATE NEW ACCOMMODATION
-       * ====================================================
-       */
-
-      const payload = {
-        registrationId,
-        hostelType,
-        checkInDate: checkIn,
-        checkOutDate: checkOut,
-        remarks: remarks.trim(),
-      };
-
-      accommodation =
-        await createAccommodation(
-          payload,
-        );
-
-      console.log(
-        "New accommodation created:",
-        accommodation,
-      );
+    if (!selectedRoom) {
+      setError("Please select a room type above.");
+      return;
     }
-
-    /**
-     * ======================================================
-     * 4. VALIDATE ACCOMMODATION ID
-     * ======================================================
-     */
-
-    const accommodationId =
-      accommodation?._id ||
-      accommodation?.id;
-
-    if (!accommodationId) {
-      throw new Error(
-        "Accommodation booking was created/found, but no booking ID was returned.",
-      );
+    if (!registrationId) {
+      setError("Please select a registration.");
+      return;
     }
-
-    /**
-     * ======================================================
-     * 5. CHECK CURRENT PAYMENT STATUS
-     * ======================================================
-     */
-
-    const paymentStatus =
-      accommodation?.paymentStatus;
-
-    console.log(
-      "Accommodation payment status:",
-      paymentStatus,
-    );
-
-    /**
-     * ======================================================
-     * ALREADY PAID
-     * ======================================================
-     *
-     * IMPORTANT:
-     *
-     * Do NOT show Booking Successful here.
-     *
-     * This is an old/existing completed payment.
-     */
-
-    if (
-      paymentStatus === "Paid"
-    ) {
-      toast.success(
-        "This accommodation booking is already paid.",
-      );
-
-      resetForm();
-
+    if (!checkInDate || !checkOutDate) {
+      setError("Please select check-in and check-out dates.");
+      return;
+    }
+    if (amount <= 0) {
+      setError("Check-out date must be after check-in date.");
+      return;
+    }
+    if (!paymentScreenshot) {
+      setError("Please upload the payment screenshot.");
       return;
     }
 
-    /**
-     * ======================================================
-     * INVALID PAYMENT STATE
-     * ======================================================
-     */
+    try {
+      setProcessing(true);
+      const payload = {
+        registrationId,
+        hostelType: selectedRoom,
+        checkInDate,
+        checkOutDate,
+        screenshotUrl: paymentScreenshot.url,
+        screenshotPublicId: paymentScreenshot.publicId,
+      };
 
-    if (
-      paymentStatus !== "Pending"
-    ) {
-      throw new Error(
-        `Accommodation payment cannot be started because its current payment status is "${paymentStatus}".`,
+      const booking = await createAccommodation(payload);
+      if (onBookingSuccess) {
+        onBookingSuccess(booking);
+      }
+    } catch (err) {
+      setError(
+        err?.response?.data?.message || "Failed to book accommodation. Please try again."
       );
+    } finally {
+      setProcessing(false);
     }
-
-    /**
-     * ======================================================
-     * 6. CREATE / REUSE RAZORPAY ORDER
-     * ======================================================
-     */
-
-    toast(
-      "Accommodation booking found. Opening payment...",
-    );
-
-    const paymentOrder =
-      await createAccommodationPaymentOrder(
-        accommodationId,
-      );
-
-    if (
-      !paymentOrder?.orderId
-    ) {
-      throw new Error(
-        "Razorpay order ID was not returned by the server.",
-      );
-    }
-
-    if (
-      !paymentOrder?.keyId
-    ) {
-      throw new Error(
-        "Razorpay key was not returned by the server.",
-      );
-    }
-
-    if (
-      paymentOrder?.amount ===
-        undefined ||
-      paymentOrder?.amount ===
-        null
-    ) {
-      throw new Error(
-        "Payment amount was not returned by the server.",
-      );
-    }
-
-    console.log(
-      "Accommodation payment order:",
-      paymentOrder,
-    );
-
-    /**
-     * ======================================================
-     * 7. OPEN RAZORPAY
-     * ======================================================
-     */
-
-    const paidAccommodation =
-      await openAccommodationPayment({
-        order:
-          paymentOrder,
-
-        accommodation,
-      });
-
-    /**
-     * ======================================================
-     * 8. PAYMENT SUCCESS
-     * ======================================================
-     *
-     * This point is reached ONLY after:
-     *
-     * Razorpay payment succeeds
-     * +
-     * backend verification succeeds
-     * +
-     * backend confirms paymentStatus === "Paid"
-     */
-
-    if (
-      !paidAccommodation
-    ) {
-      throw new Error(
-        "Payment completed, but no updated accommodation booking was returned.",
-      );
-    }
-
-    if (
-      paidAccommodation.paymentStatus !==
-      "Paid"
-    ) {
-      throw new Error(
-        "Payment verification completed, but accommodation payment status is not Paid.",
-      );
-    }
-
-    /**
-     * ======================================================
-     * 9. SHOW SUCCESS
-     * ======================================================
-     */
-
-    toast.success(
-      "Accommodation payment completed successfully.",
-    );
-
-    if (onBookingSuccess) {
-      onBookingSuccess(
-        paidAccommodation,
-      );
-    }
-
-    /**
-     * Reset only after successful
-     * payment + verification.
-     */
-
-    resetForm();
-  } catch (error) {
-    console.error(
-      "Accommodation booking/payment error:",
-      error,
-    );
-
-    const message =
-      error?.response?.data?.message ||
-      error?.message ||
-      "Unable to complete accommodation booking.";
-
-    toast.error(message);
-  } finally {
-    setLoading(false);
-  }
-};
-    /**
-   * ==========================================================
-   * UI
-   * ==========================================================
-   */
+  };
 
   return (
-    <section
-      id="accommodation-booking"
-      className="relative overflow-hidden bg-slate-950 py-28 text-white"
-    >
-      {/* ======================================================
-          Background
-          ====================================================== */}
-
-      <div className="pointer-events-none absolute inset-0">
-
-        <div className="absolute left-[-10%] top-20 h-80 w-80 rounded-full bg-cyan-500/5 blur-[140px]" />
-
-        <div className="absolute bottom-0 right-[-10%] h-80 w-80 rounded-full bg-violet-500/5 blur-[140px]" />
-
-      </div>
-
-      <div className="relative z-10 mx-auto max-w-5xl px-6">
-
-        {/* ====================================================
-            Heading
-            ==================================================== */}
-
+    <section className="relative min-h-screen overflow-hidden bg-zinc-950 px-6 py-20 pb-32">
+      <div className="mx-auto max-w-3xl pt-24 text-white">
         <motion.div
-          initial={{
-            opacity: 0,
-            y: 40,
-          }}
-          whileInView={{
-            opacity: 1,
-            y: 0,
-          }}
-          transition={{
-            duration: 0.7,
-          }}
-          viewport={{
-            once: true,
-          }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
           className="mb-12 text-center"
         >
-
-          <span className="inline-flex rounded-full border border-cyan-400/20 bg-cyan-400/10 px-5 py-2 text-sm font-semibold uppercase tracking-[0.2em] text-cyan-300">
-            Accommodation Registration
-          </span>
-
-          <h2 className="mt-7 text-4xl font-black leading-tight sm:text-5xl">
-            Reserve Your
-
-            <span className="mt-2 block bg-gradient-to-r from-cyan-300 via-sky-300 to-violet-400 bg-clip-text text-transparent">
-              Festival Stay
-            </span>
-          </h2>
-
-          <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-slate-400">
-            Select your preferred hostel,
-            choose your stay dates, and
-            complete your accommodation
-            payment.
-          </p>
-
-        </motion.div>
-
-        {/* ====================================================
-            Form Container
-            ==================================================== */}
-
-        <motion.div
-          initial={{
-            opacity: 0,
-            y: 30,
-          }}
-          whileInView={{
-            opacity: 1,
-            y: 0,
-          }}
-          transition={{
-            duration: 0.7,
-          }}
-          viewport={{
-            once: true,
-          }}
-          className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] shadow-2xl backdrop-blur-xl"
-        >
-
-          {/* ==================================================
-              Form Header
-              ================================================== */}
-
-          <div className="border-b border-white/10 bg-white/[0.03] p-8 sm:p-10">
-
-            <div className="flex items-start gap-4">
-
-              <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-cyan-400/10 ring-1 ring-cyan-400/20">
-
-                <BedDouble
-                  size={26}
-                  className="text-cyan-400"
-                />
-
-              </div>
-
-              <div>
-
-                <h3 className="text-2xl font-bold text-white">
-                  Accommodation Booking
-                </h3>
-
-                <p className="mt-2 text-slate-400">
-                  Choose your preferred hostel
-                  and accommodation dates.
-                </p>
-
-              </div>
-
-            </div>
-
+          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-cyan-500/10 shadow-[0_0_40px_rgba(6,182,212,0.2)]">
+            <BedDouble size={36} className="text-cyan-400" />
           </div>
 
-          {/* ==================================================
-              Form
-              ================================================== */}
+          <h2 className="bg-gradient-to-br from-white to-white/70 bg-clip-text text-4xl font-bold tracking-tight text-transparent md:text-5xl">
+            Book Accommodation
+          </h2>
 
-          <form
-            onSubmit={handleSubmit}
-            className="space-y-10 p-8 sm:p-10"
-          >
+          <p className="mx-auto mt-5 max-w-xl text-lg text-slate-400">
+            Submit your accommodation request. Our team will verify your payment and confirm your booking.
+          </p>
+        </motion.div>
 
-            {/* =================================================
-                Event Registration
-                ================================================= */}
-
-            <div>
-
-              <div className="mb-5 flex items-center gap-3">
-
-                <FileCheck2
-                  size={21}
-                  className="text-cyan-400"
-                />
-
-                <h3 className="text-lg font-semibold text-white">
-                  Event Registration
-                </h3>
-
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+          className="rounded-3xl border border-white/5 bg-white/[0.02] p-6 shadow-2xl backdrop-blur-xl md:p-10"
+        >
+          {!selectedRoom ? (
+             <div className="text-center py-10">
+               <p className="text-lg text-red-400 mb-4">Please select a room type above first.</p>
+               <a href="#rooms" className="text-cyan-400 hover:underline">Scroll up to select a room type</a>
+             </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-6">
+              
+              {/* Registration Select */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Select Registration</label>
+                {loadingReg ? (
+                  <div className="p-3 bg-white/5 rounded-xl border border-white/10 animate-pulse h-12"></div>
+                ) : registrations.length === 0 ? (
+                  <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-sm">
+                    You do not have any active event registrations. You must be registered for an event to book accommodation.
+                  </div>
+                ) : (
+                  <select
+                    className="w-full rounded-xl border border-white/10 bg-white/5 p-3 text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                    value={registrationId}
+                    onChange={(e) => setRegistrationId(e.target.value)}
+                    required
+                  >
+                    <option value="" disabled className="bg-zinc-900">-- Select a Registration --</option>
+                    {registrations.map(reg => (
+                      <option key={reg._id} value={reg._id} className="bg-zinc-900">
+                        {reg.event?.title || "Unknown Event"} ({reg.registrationId})
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
 
-              <RegistrationSelect
-                value={registrationId}
-                onChange={setRegistrationId}
-              />
-
-            </div>
-
-            {/* =================================================
-                Selected Hostel
-                ================================================= */}
-
-            <div>
-
-              <div className="mb-5 flex items-center gap-3">
-
-                <BedDouble
-                  size={21}
-                  className="text-cyan-400"
-                />
-
-                <h3 className="text-lg font-semibold text-white">
-                  Preferred Hostel
-                </h3>
-
-              </div>
-
-              {!hostelType ? (
-                <div className="rounded-2xl border border-amber-400/20 bg-amber-400/5 p-5 text-sm text-amber-300">
-                  Please select Boys Hostel or
-                  Girls Hostel from the hostel
-                  selection section above.
+              {/* Dates */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Check-in Date</label>
+                  <div className="relative">
+                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                      <FaCalendarAlt className="text-slate-400" />
+                    </div>
+                    <input
+                      type="date"
+                      min={todayStr}
+                      value={checkInDate}
+                      onChange={(e) => setCheckInDate(e.target.value)}
+                      required
+                      className="block w-full rounded-xl border border-white/10 bg-white/5 py-3 pl-10 pr-3 text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                    />
+                  </div>
                 </div>
-              ) : (
-                <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/5 p-5">
 
-                  <div className="flex items-center gap-4">
-
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-cyan-400/10">
-
-                      <CheckCircle2
-                        size={24}
-                        className="text-cyan-400"
-                      />
-
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Check-out Date</label>
+                  <div className="relative">
+                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                      <FaCalendarAlt className="text-slate-400" />
                     </div>
+                    <input
+                      type="date"
+                      min={minCheckOutStr}
+                      value={checkOutDate}
+                      onChange={(e) => setCheckOutDate(e.target.value)}
+                      required
+                      className="block w-full rounded-xl border border-white/10 bg-white/5 py-3 pl-10 pr-3 text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                    />
+                  </div>
+                </div>
+              </div>
 
+              {/* Payment Section */}
+              {amount > 0 && (
+                <div className="mt-8 border-t border-white/10 pt-8">
+                  <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center">
                     <div>
-
-                      <p className="text-sm text-slate-400">
-                        Selected Hostel
+                      <h3 className="text-xl font-semibold text-white">Payment Details</h3>
+                      <p className="text-sm text-slate-400 mt-1">
+                        Scan the QR code to pay <span className="text-cyan-400 font-bold">₹{amount}</span>.
                       </p>
-
-                      <p className="mt-1 text-xl font-bold text-white">
-                        {hostelType ===
-                        HOSTEL_TYPES.BOYS
-                          ? "Boys Hostel"
-                          : "Girls Hostel"}
-                      </p>
-
                     </div>
-
+                    <div className="mt-4 md:mt-0 flex items-center gap-2 bg-cyan-500/10 border border-cyan-500/20 px-4 py-2 rounded-xl text-cyan-400 font-bold text-xl">
+                      <FaRupeeSign /> {amount}
+                    </div>
                   </div>
 
-                  <p className="mt-4 text-sm leading-6 text-slate-500">
-                    Actual room and bed allotment
-                    will be handled offline by the
-                    Scintillace accommodation team.
-                  </p>
-
+                  <div className="flex flex-col md:flex-row gap-8 items-start">
+                    <div className="w-full md:w-1/3 shrink-0 flex flex-col items-center bg-white p-4 rounded-xl shadow-lg border border-zinc-200">
+                      {import.meta.env.VITE_ACCOMMODATION_UPI_QR_URL ? (
+                        <img 
+                          src={import.meta.env.VITE_ACCOMMODATION_UPI_QR_URL} 
+                          alt="Official UPI QR Code" 
+                          className="w-full aspect-square object-contain"
+                        />
+                      ) : (
+                        <div className="w-full aspect-square bg-gray-100 flex items-center justify-center text-center p-4 rounded-lg">
+                          <p className="text-gray-500 text-sm font-medium">QR Code not configured.</p>
+                        </div>
+                      )}
+                      <p className="mt-3 text-black font-semibold">Pay ₹{amount}</p>
+                    </div>
+                    
+                    <div className="w-full md:w-2/3">
+                      <PaymentProofUpload 
+                        onUploadComplete={setPaymentScreenshot}
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
 
-            </div>
-
-            {/* =================================================
-                Stay Dates
-                ================================================= */}
-
-            <div>
-
-              <div className="mb-5 flex items-center gap-3">
-
-                <CalendarDays
-                  size={21}
-                  className="text-cyan-400"
-                />
-
-                <h3 className="text-lg font-semibold text-white">
-                  Stay Details
-                </h3>
-
-              </div>
-
-              <DateSelection
-                checkIn={checkIn}
-                checkOut={checkOut}
-                setCheckIn={setCheckIn}
-                setCheckOut={setCheckOut}
-              />
-
-            </div>
-
-            {/* =================================================
-                Remarks
-                ================================================= */}
-
-            <div>
-
-              <label
-                htmlFor="accommodation-remarks"
-                className="mb-3 block text-sm font-semibold text-slate-200"
-              >
-                Remarks
-
-                <span className="ml-2 font-normal text-slate-500">
-                  Optional
-                </span>
-              </label>
-
-              <textarea
-                id="accommodation-remarks"
-                value={remarks}
-                onChange={(event) =>
-                  setRemarks(
-                    event.target.value,
-                  )
-                }
-                maxLength={1000}
-                rows={4}
-                placeholder="Add any accommodation-related remarks..."
-                className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400/50 focus:ring-1 focus:ring-cyan-400/30"
-              />
-
-              <p className="mt-2 text-right text-xs text-slate-600">
-                {remarks.length}/1000
-              </p>
-
-            </div>
-
-            {/* =================================================
-                Booking Summary
-                ================================================= */}
-
-            <BookingSummaryCard
-              room={hostelType}
-              checkIn={checkIn}
-              checkOut={checkOut}
-              days={accommodationDays}
-              amount={totalAmount}
-            />
-
-            {/* =================================================
-                Pricing Information
-                ================================================= */}
-
-            <div className="rounded-2xl border border-cyan-400/10 bg-cyan-400/5 p-5">
-
-              <div className="flex gap-3">
-
-                <ShieldCheck
-                  size={21}
-                  className="mt-0.5 flex-shrink-0 text-cyan-300"
-                />
-
-                <div className="text-sm leading-6 text-slate-400">
-
-                  <p>
-                    <strong className="text-slate-200">
-                      Accommodation rate:
-                    </strong>{" "}
-                    ₹100 per day.
-                  </p>
-
-                  <p className="mt-1">
-                    The final amount is calculated
-                    and validated by the backend.
-                  </p>
-
-                  <p className="mt-1">
-                    You will be redirected to
-                    Razorpay to complete the
-                    accommodation payment securely.
-                  </p>
-
+              {/* Error */}
+              {error && (
+                <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-5 py-4 text-sm text-red-300">
+                  {error}
                 </div>
+              )}
 
-              </div>
-
-            </div>
-
-            {/* =================================================
-                Submit
-                ================================================= */}
-
-            <button
-              type="submit"
-              disabled={
-                loading ||
-                !hostelType ||
-                !registrationId ||
-                accommodationDays <= 0
-              }
-              className="w-full rounded-xl bg-gradient-to-r from-cyan-500 via-sky-500 to-violet-500 py-4 text-lg font-semibold text-white shadow-lg shadow-cyan-500/20 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-cyan-500/30 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
-            >
-              {loading
-                ? "Processing Payment..."
-                : accommodationDays > 0
-                  ? `Book & Pay — ₹${totalAmount}`
-                  : "Select Accommodation Dates"}
-            </button>
-
-          </form>
-
+              {/* Submit */}
+              <button
+                type="submit"
+                disabled={processing || registrations.length === 0 || amount <= 0 || !paymentScreenshot}
+                className="w-full mt-6 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-6 py-4 text-lg font-bold text-white transition hover:from-cyan-600 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2 shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:shadow-[0_0_30px_rgba(6,182,212,0.5)]"
+              >
+                {processing ? (
+                  <><FaSpinner className="animate-spin" /> Processing...</>
+                ) : (
+                  `Submit & Pay ₹${amount}`
+                )}
+              </button>
+            </form>
+          )}
         </motion.div>
 
-        {/* ====================================================
-            Security Note
-            ==================================================== */}
-
         <div className="mt-8 flex items-center justify-center gap-2 text-center text-sm text-slate-500">
-
-          <ShieldCheck
-            size={17}
-            className="text-cyan-400"
-          />
-
+          <ShieldCheck size={17} className="text-cyan-400" />
           <span>
-            Your accommodation information and
-            payment are handled through the
-            festival registration system.
+            Your accommodation information is handled securely by the FestSphere team.
           </span>
-
         </div>
-
       </div>
     </section>
   );

@@ -21,6 +21,8 @@ const createRegistration = asyncHandler(
     const {
       event,
       teamId = null,
+      screenshotUrl = null,
+      screenshotPublicId = null,
     } = req.body;
 
     const result =
@@ -28,6 +30,8 @@ const createRegistration = asyncHandler(
         req.user._id,
         event,
         teamId,
+        screenshotUrl,
+        screenshotPublicId,
       );
 
     return res
@@ -37,7 +41,7 @@ const createRegistration = asyncHandler(
 
         message:
           result.paymentRequired
-            ? "Registration created. Payment is required."
+            ? "Registration submitted. Your payment is pending verification."
             : "Registration created successfully.",
 
         data: result,
@@ -61,11 +65,29 @@ const getAllRegistrations =
       const limit =
         Number(req.query.limit) || 10;
 
+      const filter = {};
+      if (req.query.status) {
+        filter.status = req.query.status;
+      }
+      if (req.query.paymentStatus) {
+        filter.paymentStatus = req.query.paymentStatus;
+      }
+      if (req.query.event) {
+        filter.event = req.query.event;
+      }
+      if (req.query.festival) {
+        filter.festival = req.query.festival;
+      }
+      if (req.query.team) {
+        filter.team = req.query.team;
+      }
+
       const result =
         await registrationService.getAllRegistrations(
           {
             page,
             limit,
+            filter,
           },
         );
 
@@ -98,6 +120,8 @@ const getRegistrationById =
       const registration =
         await registrationService.getRegistrationById(
           req.params.id,
+          req.user._id,
+          req.user.role,
         );
 
       return res
@@ -418,6 +442,56 @@ const deleteRegistration =
 
 /**
  * ============================================================
+ * Admin Payment Verification Flow
+ * ============================================================
+ */
+
+const getPaymentByRegistration = asyncHandler(async (req, res) => {
+  const payment = await registrationService.getPaymentByRegistration(
+    req.params.id,
+  );
+
+  return res.status(HTTP_STATUS.OK).json({
+    success: true,
+    data: {
+      payment,
+    },
+  });
+});
+
+const approveRegistration = asyncHandler(async (req, res) => {
+  const registration = await registrationService.approveRegistration(
+    req.params.id,
+    req.user._id
+  );
+
+  return res.status(HTTP_STATUS.OK).json({
+    success: true,
+    message: "Registration approved successfully.",
+    data: {
+      registration,
+    },
+  });
+});
+
+const rejectRegistration = asyncHandler(async (req, res) => {
+  const registration = await registrationService.rejectRegistration(
+    req.params.id,
+    req.user._id,
+    req.body.rejectionReason
+  );
+
+  return res.status(HTTP_STATUS.OK).json({
+    success: true,
+    message: "Registration rejected successfully.",
+    data: {
+      registration,
+    },
+  });
+});
+
+/**
+ * ============================================================
  * Controller Export
  * ============================================================
  */
@@ -447,6 +521,10 @@ const registrationController =
     checkInRegistration,
 
     deleteRegistration,
+    
+    getPaymentByRegistration,
+    approveRegistration,
+    rejectRegistration,
   });
 
 export default registrationController;

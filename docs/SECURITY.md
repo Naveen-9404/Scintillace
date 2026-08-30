@@ -62,8 +62,6 @@ Recommended variables:
 - MONGO_URI
 - JWT_SECRET
 - JWT_REFRESH_SECRET
-- RAZORPAY_KEY_ID
-- RAZORPAY_KEY_SECRET
 - CLOUDINARY_CLOUD_NAME
 - CLOUDINARY_API_KEY
 - CLOUDINARY_API_SECRET
@@ -81,8 +79,8 @@ Recommended variables:
 
 ## 8. Payment Security
 
-- Verify payment signatures before confirming status.
-- Use idempotency for payment callbacks.
+- Verify payment screenshots manually before confirming status.
+- Ensure admin dashboard access is restricted to authorized roles.
 - Store only required payment metadata.
 - Log payment events securely without exposing raw secrets.
 

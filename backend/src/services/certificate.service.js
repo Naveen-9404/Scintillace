@@ -745,8 +745,9 @@ const issueCertificate =
 const generateAndSendCertificate =
   async (
     certificate,
+    prePopulated = null,
   ) => {
-    const populated =
+    const populated = prePopulated ||
       await certificateRepository.findByIdWithVerificationCode(
         certificate._id,
       );
@@ -882,291 +883,278 @@ const disburseFestivalCertificates =
         },
       );
 
+    const registrationIds = registrations.map(r => r._id);
+    const existingCertificatesList = await certificateRepository.findCertificatesWithVerificationCodeByRegistrationIds(registrationIds);
+    const certificateMap = new Map();
+    for (const cert of existingCertificatesList) {
+      const regIdStr = cert.registration?._id?.toString() || cert.registration?.toString();
+      const userIdStr = cert.user?._id?.toString() || cert.user?.toString();
+      certificateMap.set(`${regIdStr}_${userIdStr}`, cert);
+    }
+
     const result = {
       festivalId,
-
-      totalEligible:
-        registrations.length,
-
+      totalEligible: registrations.length,
       created: 0,
-
       issued: 0,
-
       emailed: 0,
-
       skipped: 0,
-
       failed: 0,
-
       details: [],
     };
 
-    for (
-      const registration of registrations
-    ) {
-      const registrationId =
-        registration._id;
+    for (const registration of registrations) {
+      const registrationId = registration._id;
+      const regIdStr = registrationId.toString();
 
-      try {
-        /**
-         * ------------------------------------------------------
-         * Find existing certificate
-         * ------------------------------------------------------
-         */
+      let participants = [];
+      if (registration.team && registration.team.members && registration.team.members.length > 0) {
+        participants = registration.team.members.map(m => m.user);
+      } else {
+        participants = [registration.user];
+      }
 
-        let certificate =
-          await certificateRepository.findByRegistration(
-            registrationId,
-          );
+      for (const participantUser of participants) {
+        const userIdStr = participantUser._id?.toString() || participantUser.toString();
 
-        /**
-         * ------------------------------------------------------
-         * Existing Certificate
-         * ------------------------------------------------------
-         */
-
-        if (certificate) {
-          /**
-           * Revoked certificate
-           */
-
-          if (
-            certificate.status ===
-            "REVOKED"
-          ) {
-            result.skipped += 1;
-
-            result.details.push({
-              registrationId,
-
-              status:
-                "SKIPPED",
-
-              reason:
-                "Certificate was previously revoked.",
-            });
-
-            continue;
-          }
+        try {
+          let certificate = certificateMap.get(`${regIdStr}_${userIdStr}`);
 
           /**
-           * Already issued
+           * ------------------------------------------------------
+           * Existing Certificate
+           * ------------------------------------------------------
            */
 
-          if (
-            certificate.status ===
-            "ISSUED"
-          ) {
-            result.skipped += 1;
-
-            result.details.push({
-              registrationId,
-
-              status:
-                "SKIPPED",
-
-              reason:
-                "Certificate already issued.",
-
-              certificateNumber:
-                certificate.certificateNumber,
-            });
-
-            continue;
-          }
-
-          /**
-           * ----------------------------------------------------
-           * Repair missing verification code
-           * ----------------------------------------------------
-           *
-           * The certificate model hides verificationCode from
-           * normal queries.
-           *
-           * Therefore we explicitly reload it below.
-           */
-
-          let certificateWithCode =
-            await certificateRepository.findByIdWithVerificationCode(
-              certificate._id,
-            );
-
-          /**
-           * If the existing certificate does not have a
-           * verification code, generate and save one.
-           */
-
-          if (
-            !certificateWithCode?.verificationCode
-          ) {
-            const verificationCode =
-              generateVerificationCode();
-
-            await certificateRepository.updateByIdRaw(
-              certificate._id,
-              {
-                verificationCode,
-              },
-            );
-
+          if (certificate) {
             /**
-             * Reload after saving the verification code.
+             * Revoked certificate
              */
 
-            certificateWithCode =
+            if (
+              certificate.status ===
+              "REVOKED"
+            ) {
+              result.skipped += 1;
+
+              result.details.push({
+                registrationId,
+                userId: userIdStr,
+
+                status:
+                  "SKIPPED",
+
+                reason:
+                  "Certificate was previously revoked.",
+              });
+
+              continue;
+            }
+
+            /**
+             * Already issued
+             */
+
+            if (
+              certificate.status ===
+              "ISSUED"
+            ) {
+              result.skipped += 1;
+
+              result.details.push({
+                registrationId,
+                userId: userIdStr,
+
+                status:
+                  "SKIPPED",
+
+                reason:
+                  "Certificate already issued.",
+
+                certificateNumber:
+                  certificate.certificateNumber,
+              });
+
+              continue;
+            }
+
+            /**
+             * ----------------------------------------------------
+             * Repair missing verification code
+             * ----------------------------------------------------
+             */
+
+            let certificateWithCode =
               await certificateRepository.findByIdWithVerificationCode(
                 certificate._id,
               );
+
+            if (
+              !certificateWithCode?.verificationCode
+            ) {
+              const verificationCode =
+                generateVerificationCode();
+
+              await certificateRepository.updateByIdRaw(
+                certificate._id,
+                {
+                  verificationCode,
+                },
+              );
+
+              certificateWithCode = certificateMap.get(`${regIdStr}_${userIdStr}`) || 
+                await certificateRepository.findByIdWithVerificationCode(
+                  certificate._id,
+                );
+            }
+
+            if (
+              !certificateWithCode
+            ) {
+              throw new ApiError(
+                "Certificate could not be loaded after verification code repair.",
+                HTTP_STATUS.INTERNAL_SERVER_ERROR,
+              );
+            }
+
+            if (
+              !certificateWithCode.verificationCode
+            ) {
+              throw new ApiError(
+                "Certificate verification code could not be generated.",
+                HTTP_STATUS.INTERNAL_SERVER_ERROR,
+              );
+            }
+
+            certificate =
+              certificateWithCode;
           }
 
-          if (
-            !certificateWithCode
-          ) {
-            throw new ApiError(
-              "Certificate could not be loaded after verification code repair.",
-              HTTP_STATUS.INTERNAL_SERVER_ERROR,
+          /**
+           * ------------------------------------------------------
+           * Create Certificate
+           * ------------------------------------------------------
+           */
+
+          if (!certificate) {
+            certificate =
+              await createCertificate(
+                {
+                  user:
+                    participantUser._id ||
+                    participantUser.id ||
+                    participantUser,
+
+                  registration:
+                    registration._id,
+
+                  event:
+                    registration.event?._id ||
+                    registration.event,
+
+                  festival:
+                    registration.festival?._id ||
+                    registration.festival,
+
+                  participantName:
+                    participantUser.fullName ||
+                    registration.participantName ||
+                    "",
+
+                  certificateType:
+                    "PARTICIPATION",
+
+                  position: "",
+                },
+
+                adminUser._id ||
+                  adminUser.id,
+              );
+
+            result.created += 1;
+          }
+
+          /**
+           * ------------------------------------------------------
+           * Generate PDF + Send Email
+           * ------------------------------------------------------
+           */
+
+          const delivery =
+            await generateAndSendCertificate(
+              certificate,
+              certificate,
             );
-          }
 
-          if (
-            !certificateWithCode.verificationCode
-          ) {
-            throw new ApiError(
-              "Certificate verification code could not be generated.",
-              HTTP_STATUS.INTERNAL_SERVER_ERROR,
+          /**
+           * ------------------------------------------------------
+           * Issue Certificate
+           * ------------------------------------------------------
+           */
+
+          const issued =
+            await issueCertificate(
+              certificate._id,
             );
+
+          result.issued += 1;
+
+          result.emailed += 1;
+
+          result.details.push({
+            registrationId,
+            userId: userIdStr,
+
+            status:
+              "EMAILED",
+
+            certificateNumber:
+              issued.certificateNumber,
+
+            email:
+              delivery.email,
+          });
+        } catch (error) {
+          result.failed += 1;
+
+          /**
+           * If the certificate record already exists, record the
+           * delivery error without destroying the certificate.
+           */
+
+          try {
+            const existingCertificate =
+              await certificateRepository.findByRegistrationAndUser(
+                registrationId,
+                userIdStr,
+              );
+
+            if (
+              existingCertificate
+            ) {
+              await certificateRepository.updateById(
+                existingCertificate._id,
+                {
+                  emailError:
+                    error.message ||
+                    "Certificate disbursal failed.",
+                },
+              );
+            }
+          } catch {
+            // Do not hide the original error.
           }
 
-          certificate =
-            certificateWithCode;
+          result.details.push({
+            registrationId,
+            userId: userIdStr,
+            error: error.message || "Failed to disburse certificate.",
+          });
         }
-
-        /**
-         * ------------------------------------------------------
-         * Create Certificate
-         * ------------------------------------------------------
-         */
-
-        if (!certificate) {
-          certificate =
-            await createCertificate(
-              {
-                user:
-                  registration.user?._id ||
-                  registration.user,
-
-                registration:
-                  registration._id,
-
-                event:
-                  registration.event?._id ||
-                  registration.event,
-
-                festival:
-                  registration.festival?._id ||
-                  registration.festival,
-
-                participantName:
-                  registration.participantName ||
-                  registration.user?.fullName ||
-                  "",
-
-                certificateType:
-                  "PARTICIPATION",
-
-                position: "",
-              },
-
-              adminUser._id ||
-                adminUser.id,
-            );
-
-          result.created += 1;
-        }
-
-        /**
-         * ------------------------------------------------------
-         * Generate PDF + Send Email
-         * ------------------------------------------------------
-         */
-
-        const delivery =
-          await generateAndSendCertificate(
-            certificate,
-          );
-
-        /**
-         * ------------------------------------------------------
-         * Issue Certificate
-         * ------------------------------------------------------
-         *
-         * Certificate becomes officially valid only after
-         * PDF generation and email delivery succeed.
-         */
-
-        const issued =
-          await issueCertificate(
-            certificate._id,
-          );
-
-        result.issued += 1;
-
-        result.emailed += 1;
-
-        result.details.push({
-          registrationId,
-
-          status:
-            "EMAILED",
-
-          certificateNumber:
-            issued.certificateNumber,
-
-          email:
-            delivery.email,
-        });
-      } catch (error) {
-        result.failed += 1;
-
-        /**
-         * If the certificate record already exists, record the
-         * delivery error without destroying the certificate.
-         */
-
-        try {
-          const existingCertificate =
-            await certificateRepository.findByRegistration(
-              registrationId,
-            );
-
-          if (
-            existingCertificate
-          ) {
-            await certificateRepository.updateById(
-              existingCertificate._id,
-              {
-                emailError:
-                  error.message ||
-                  "Certificate disbursal failed.",
-              },
-            );
-          }
-        } catch {
-          // Do not hide the original error.
-        }
-
-        result.details.push({
-          registrationId,
-
-          status:
-            "FAILED",
-
-          reason:
-            error.message ||
-            "Certificate disbursal failed.",
-        });
       }
     }
+
+
 
     return result;
   };

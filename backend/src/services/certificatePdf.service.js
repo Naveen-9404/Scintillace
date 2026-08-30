@@ -1,4 +1,4 @@
-﻿import fs from "fs/promises";
+import fs from "fs/promises";
 import path from "path";
 
 import {
@@ -36,6 +36,7 @@ const PAGE_HEIGHT = 842 * (2 / 3);
  * All placement calculations are based on this coordinate
  * system and then scaled to the PDF page.
  */
+
 const TEMPLATE_WIDTH = 1536;
 const TEMPLATE_HEIGHT = 1024;
 
@@ -124,34 +125,6 @@ const safeText = (
   }
 
   return String(value).trim();
-};
-
-const formatFestivalDate = (
-  value,
-) => {
-  if (!value) {
-    return "";
-  }
-
-  const date =
-    new Date(value);
-
-  if (
-    Number.isNaN(
-      date.getTime(),
-    )
-  ) {
-    return "";
-  }
-
-  return date.toLocaleDateString(
-    "en-IN",
-    {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    },
-  );
 };
 
 const ordinal = (
@@ -303,6 +276,7 @@ const drawCenteredFittedText = ({
  * Convert template-space Y coordinate from the top
  * into PDF coordinate space from the bottom.
  */
+
 const templateY = (
   topY,
 ) => {
@@ -353,81 +327,39 @@ const clearDynamicAreas = (
   page,
 ) => {
   /**
-   * Participant name area
+   * ----------------------------------------------------------
+   * Event name area
+   * ----------------------------------------------------------
    */
+
   page.drawRectangle({
-    x:
-      templateX(330),
-
-    y: templateY(645), width: templateW(875), height: templateH(35),
-
-    color:
-      COLORS.cream,
+    x: templateX(330),
+    y: templateY(705),
+    width: templateW(875),
+    height: templateH(30),
+    color: COLORS.cream,
   });
 
   /**
-   * Event name area.
+   * ----------------------------------------------------------
+   * Festival/date area
+   * ----------------------------------------------------------
    */
+
   page.drawRectangle({
-    x:
-      templateX(430),
-
-    y:
-      templateY(725),
-
-    width:
-      templateW(680),
-
-    height:
-      templateH(58),
-
-    color:
-      COLORS.cream,
+    x: templateX(330),
+    y: templateY(770),
+    width: templateW(875),
+    height: templateH(55),
+    color: COLORS.cream,
   });
 
   /**
-   * Festival/date area.
+   * ----------------------------------------------------------
+   * QR code area
+   * ----------------------------------------------------------
    */
-  page.drawRectangle({
-    x:
-      templateX(400),
 
-    y:
-      templateY(785),
-
-    width:
-      templateW(740),
-
-    height:
-      templateH(70),
-
-    color:
-      COLORS.cream,
-  });
-
-  /**
-   * Appreciation line.
-   */
-  page.drawRectangle({
-    x:
-      templateX(430),
-
-    y:
-      templateY(830),
-
-    width:
-      templateW(680),
-
-    height:
-      templateH(42),
-
-    color:
-      COLORS.cream,
-  });
-
-  /**
-   * QR code area.
-   */
   page.drawRectangle({
     x:
       templateX(55),
@@ -446,8 +378,11 @@ const clearDynamicAreas = (
   });
 
   /**
-   * Certificate ID area.
+   * ----------------------------------------------------------
+   * Certificate ID area
+   * ----------------------------------------------------------
    */
+
   page.drawRectangle({
     x:
       templateX(45),
@@ -685,113 +620,37 @@ const generateCertificatePdf =
 
     drawCenteredFittedText({
       page,
-
-      text:
-        participantName,
-
-      font:
-        italicFont,
-
-      maxWidth:
-        templateW(850),
-
-      initialSize:
-        27,
-
-      minimumSize:
-        16,
-
-      y:
-        templateY(625),
-
-      color:
-        COLORS.darkGreen,
+      text: participantName,
+      font: italicFont,
+      maxWidth: templateW(850),
+      initialSize: 27,
+      minimumSize: 16,
+      y: templateY(642),
+      color: COLORS.darkGreen,
     });
-
-    /**
-     * ========================================================
-     * Participant Underline
-     * ========================================================
-     */
-
-    page.drawLine({
-      start: {
-        x:
-          templateX(335),
-
-        y:
-          templateY(650),
-      },
-
-      end: {
-        x:
-          templateX(1205),
-
-        y:
-          templateY(650),
-      },
-
-      thickness:
-        0.8,
-
-      color:
-        COLORS.gold,
-    });
-
-    /**
-     * ========================================================
-     * Participation Text
-     * ========================================================
-     */
-
-    const participationText =
-      certificateType ===
-      "PARTICIPATION"
-        ? "has participated in"
-        : certificateType ===
-            "WINNER"
-          ? "has secured the position of Winner in"
-          : certificateType ===
-              "RUNNER_UP"
-            ? "has secured the position of Runner-Up in"
-            : `has received a ${certificateType
-                .replace(
-                  "_",
-                  " ",
-                )
-                .toLowerCase()} certificate for`;
-
-    if (certificateType !== "PARTICIPATION") { drawCenteredText({ page, text: participationText, font: regularFont, size: 11, y: templateY(685), color: COLORS.darkText }); }
 
     /**
      * ========================================================
      * Event Title
      * ========================================================
+     *
+     * IMPORTANT:
+     *
+     * The certificate template already contains the
+     * "has participated in" text.
+     *
+     * Therefore it is intentionally NOT drawn here.
      */
 
     drawCenteredFittedText({
       page,
-
-      text:
-        eventTitle.toUpperCase(),
-
-      font:
-        boldFont,
-
-      maxWidth:
-        templateW(730),
-
-      initialSize:
-        18,
-
-      minimumSize:
-        10,
-
-      y:
-        templateY(715),
-
-      color:
-        COLORS.darkGreen,
+      text: eventTitle.toUpperCase(),
+      font: boldFont,
+      maxWidth: templateW(730),
+      initialSize: 18,
+      minimumSize: 10,
+      y: templateY(700),
+      color: COLORS.darkGreen,
     });
 
     /**
@@ -802,111 +661,39 @@ const generateCertificatePdf =
 
     drawCenteredText({
       page,
-
-      text:
-        `organized as part of ${festivalTitle}`,
-
-      font:
-        regularFont,
-
-      size:
-        10,
-
-      y:
-        templateY(742),
-
-      color:
-        COLORS.darkText,
+      text: `organized as part of ${festivalTitle}`,
+      font: regularFont,
+      size: 10,
+      y: templateY(730),
+      color: COLORS.darkText,
     });
 
     /**
      * ========================================================
      * Festival Dates
      * ========================================================
-     *
-     * IMPORTANT:
-     *
-     * The certificate uses the festival dates, NOT the
-     * certificate issue date.
-     *
-     * Scintillace 2K26:
-     *
-     * 29th September to 30th September 2026
-     * ========================================================
      */
 
     let dateText = "";
 
-    if (
-      festivalStartDate &&
-      festivalEndDate
-    ) {
-      dateText =
-        `from ${formatCertificateDate(
-          festivalStartDate,
-        )} to ${formatCertificateDate(
-          festivalEndDate,
-        )}`;
-    } else if (
-      festivalStartDate
-    ) {
-      dateText =
-        `on ${formatCertificateDate(
-          festivalStartDate,
-        )}`;
+    if (festivalStartDate && festivalEndDate) {
+      dateText = `from ${formatCertificateDate(festivalStartDate)} to ${formatCertificateDate(festivalEndDate)}`;
+    } else if (festivalStartDate) {
+      dateText = `on ${formatCertificateDate(festivalStartDate)}`;
     }
 
     if (dateText) {
       drawCenteredFittedText({
         page,
-
-        text:
-          dateText,
-
-        font:
-          regularFont,
-
-        maxWidth:
-          templateW(750),
-
-        initialSize:
-          10,
-
-        minimumSize:
-          8,
-
-        y:
-          templateY(768),
-
-        color:
-          COLORS.darkText,
+        text: dateText,
+        font: regularFont,
+        maxWidth: templateW(750),
+        initialSize: 10,
+        minimumSize: 8,
+        y: templateY(765),
+        color: COLORS.darkText,
       });
     }
-
-    /**
-     * ========================================================
-     * Appreciation
-     * ========================================================
-     */
-
-    drawCenteredText({
-      page,
-
-      text:
-        "We appreciate your enthusiasm and commitment.",
-
-      font:
-        regularFont,
-
-      size:
-        10,
-
-      y:
-        templateY(795),
-
-      color:
-        COLORS.darkText,
-    });
 
     /**
      * ========================================================
@@ -1097,9 +884,3 @@ const certificatePdfService =
   });
 
 export default certificatePdfService;
-
-
-
-
-
-

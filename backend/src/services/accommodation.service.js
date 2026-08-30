@@ -1,5 +1,13 @@
 import accommodationRepository from "../repositories/accommodation.repository.js";
 import registrationRepository from "../repositories/registration.repository.js";
+import paymentRepository from "../repositories/payment.repository.js";
+
+import User from "../models/User.js";
+
+import receiptUtil from "../utils/receipt.js";
+import emailUtil from "../utils/email.js";
+import logger from "../utils/logger.js";
+import cloudinaryUtil from "../utils/cloudinary.js";
 
 import ApiError from "../utils/ApiError.js";
 import HTTP_STATUS from "../constants/httpStatus.js";
@@ -10,6 +18,12 @@ import {
   ACCOMMODATION_PAYMENT_STATUS,
   ACCOMMODATION_PRICE_PER_DAY,
 } from "../constants/accommodation.constants.js";
+
+import {
+  PAYMENT_FOR,
+  PAYMENT_STATUS,
+  PAYMENT_GATEWAY,
+} from "../constants/payment.constants.js";
 
 /**
  * ============================================================
@@ -33,34 +47,27 @@ const calculateAccommodationDays = (
   const end = new Date(endDate);
 
   /**
-   * Normalize both dates to midnight so that
-   * timezone/time components cannot produce
-   * an incorrect accommodation-day count.
+   * Use UTC to normalize dates to absolute calendar days,
+   * completely avoiding timezone and DST anomalies.
    */
-
-  start.setHours(
-    0,
-    0,
-    0,
-    0,
+  const utcStart = Date.UTC(
+    start.getFullYear(),
+    start.getMonth(),
+    start.getDate()
   );
 
-  end.setHours(
-    0,
-    0,
-    0,
-    0,
+  const utcEnd = Date.UTC(
+    end.getFullYear(),
+    end.getMonth(),
+    end.getDate()
   );
 
   const millisecondsPerDay =
     24 * 60 * 60 * 1000;
 
-  const difference =
-    end.getTime() -
-    start.getTime();
+  const difference = utcEnd - utcStart;
 
-  return difference /
-    millisecondsPerDay;
+  return Math.round(difference / millisecondsPerDay);
 };
 
 /**
@@ -79,7 +86,7 @@ const calculateAccommodationDays = (
  *
  * Pricing:
  *
- * ₹100 × number of accommodation days
+ * ₹200 × number of accommodation days
  *
  * The amount supplied by the frontend is NEVER trusted.
  */
@@ -190,6 +197,8 @@ const createAccommodation = async (
     checkOutDate,
     currency = "INR",
     remarks = "",
+    screenshotUrl = null,
+    screenshotPublicId = null,
   } = bookingData;
 
   /**
@@ -271,7 +280,7 @@ const createAccommodation = async (
    * 10. Calculate amount
    * ----------------------------------------------------------
    *
-   * ₹100 per participant per accommodation day.
+   * ₹200 per participant per accommodation day.
    *
    * Amount is calculated entirely by the backend.
    */
@@ -307,8 +316,8 @@ const createAccommodation = async (
    * ----------------------------------------------------------
    */
 
-  const accommodation =
-    await accommodationRepository.create({
+  try {
+    const accommodation = await accommodationRepository.create({
       user: userId,
 
       registration:
@@ -352,13 +361,36 @@ const createAccommodation = async (
           : "",
     });
 
-  /**
-   * ----------------------------------------------------------
-   * 13. Return booking
-   * ----------------------------------------------------------
-   */
+    /**
+     * ----------------------------------------------------------
+     * 13. Create payment record
+     * ----------------------------------------------------------
+     */
 
-  return accommodation;
+    const paymentData = {
+      user: userId,
+      accommodation: accommodation._id,
+      paymentFor: PAYMENT_FOR.ACCOMMODATION,
+      amount,
+      currency: normalizedCurrency,
+      gateway: PAYMENT_GATEWAY.UPI,
+      screenshotUrl,
+      screenshotPublicId,
+      status: PAYMENT_STATUS.PENDING,
+    };
+
+    await paymentRepository.create(paymentData);
+
+    return accommodation;
+  } catch (error) {
+    if (error.code === 11000 && error.keyPattern && error.keyPattern.registration) {
+      throw new ApiError(
+        'Accommodation already booked for this registration.',
+        HTTP_STATUS.CONFLICT
+      );
+    }
+    throw error;
+  }
 };
 
 /**
@@ -559,18 +591,25 @@ const confirmAccommodation =
         .substring(2, 7)
         .toUpperCase()}`;
 
-    return accommodationRepository.updateById(
-      bookingId,
+    const updatedBooking = await accommodationRepository.updateWithCondition(
       {
-        bookingStatus:
-          ACCOMMODATION_BOOKING_STATUS.CONFIRMED,
-
-        confirmationCode,
-
-        confirmedAt:
-          new Date(),
+        _id: bookingId,
+        bookingStatus: { $ne: ACCOMMODATION_BOOKING_STATUS.CONFIRMED },
       },
+      {
+        bookingStatus: ACCOMMODATION_BOOKING_STATUS.CONFIRMED,
+        confirmationCode,
+        confirmedAt: new Date(),
+      }
     );
+
+    if (!updatedBooking) {
+      throw new ApiError(
+        'Accommodation is already confirmed or was modified concurrently.',
+        HTTP_STATUS.CONFLICT
+      );
+    }
+    return updatedBooking;
   };
 
 /**
@@ -613,17 +652,166 @@ const markPaymentPaid =
       return booking;
     }
 
-    return accommodationRepository.updateById(
-      bookingId,
+    const updatedBooking = await accommodationRepository.updateWithCondition(
       {
-        paymentStatus:
-          ACCOMMODATION_PAYMENT_STATUS.PAID,
-
-        payment:
-          paymentId ||
-          booking.payment,
+        _id: bookingId,
+        paymentStatus: { $ne: ACCOMMODATION_PAYMENT_STATUS.PAID },
       },
+      {
+        paymentStatus: ACCOMMODATION_PAYMENT_STATUS.PAID,
+        payment: paymentId || booking.payment,
+      }
     );
+
+    if (!updatedBooking) {
+      throw new ApiError(
+        'Accommodation payment is already paid or was modified concurrently.',
+        HTTP_STATUS.CONFLICT
+      );
+    }
+
+    try {
+      const getReferenceId = (ref) => ref?._id || ref;
+      const user = await User.findById(getReferenceId(updatedBooking.user)).lean();
+      
+      let payment = await paymentRepository.findPendingByAccommodation(updatedBooking._id);
+      
+      if (payment) {
+        await paymentRepository.updateById(payment._id, {
+          status: PAYMENT_STATUS.PAID,
+          paidAt: new Date(),
+        });
+      } else {
+        payment = {
+          amount: updatedBooking.amount,
+          currency: updatedBooking.currency || "INR",
+          paymentId: "OFFLINE / MANUAL",
+          orderId: "OFFLINE / MANUAL",
+        };
+      }
+
+      if (user && user.email) {
+        const accommodationDays = calculateAccommodationDays(
+          updatedBooking.checkInDate,
+          updatedBooking.checkOutDate
+        );
+
+        const pdf = await receiptUtil.generateAccommodationReceiptPDF({
+          accommodation: updatedBooking,
+        });
+
+        await emailUtil.sendAccommodationConfirmation({
+          to: user.email,
+          participantName: user.fullName,
+          eventName: updatedBooking.event?.title || "Scintillace Accommodation",
+          hostelType: updatedBooking.hostelType,
+          checkInDate: updatedBooking.checkInDate,
+          checkOutDate: updatedBooking.checkOutDate,
+          accommodationDays,
+          amount: payment.amount,
+          currency: payment.currency,
+          paymentId: payment.paymentId,
+          orderId: payment.orderId,
+          bookingId: updatedBooking._id,
+          confirmationCode: updatedBooking.confirmationCode || "PENDING",
+          pdfBuffer: pdf,
+        });
+
+        logger.info(`Manual accommodation payment confirmation email sent successfully for booking ${updatedBooking._id}.`);
+      }
+    } catch (error) {
+      logger.error(`Manual accommodation payment confirmation email failed for booking ${updatedBooking._id}: ${error.message}`);
+    }
+
+    return updatedBooking;
+  };
+
+/**
+ * ============================================================
+ * Reject Accommodation Booking (Admin)
+ * ============================================================
+ */
+
+const rejectAccommodation =
+  async (bookingId, reason = "") => {
+    const booking =
+      await accommodationRepository.findById(
+        bookingId,
+      );
+
+    if (!booking) {
+      throw new ApiError(
+        "Accommodation booking not found.",
+        HTTP_STATUS.NOT_FOUND,
+      );
+    }
+
+    if (
+      booking.bookingStatus !==
+      ACCOMMODATION_BOOKING_STATUS.PENDING
+    ) {
+      throw new ApiError(
+        "Only PENDING accommodations can be rejected.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    const payment = await paymentRepository.findPendingByAccommodation(bookingId);
+    
+    if (!payment) {
+      throw new ApiError(
+        "Payment record not found.",
+        HTTP_STATUS.NOT_FOUND,
+      );
+    }
+
+    if (payment.status !== PAYMENT_STATUS.PENDING) {
+      throw new ApiError(
+        "Payment is not in PENDING status.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    const updatedPayment = await paymentRepository.updateById(payment._id, {
+      status: PAYMENT_STATUS.FAILED,
+      screenshotUrl: null,
+      screenshotPublicId: null
+    });
+
+    if (!updatedPayment) {
+      throw new ApiError(
+        "Failed to reject payment. It may have already been processed.",
+        HTTP_STATUS.CONFLICT,
+      );
+    }
+
+    const updatedBooking = await accommodationRepository.updateWithCondition(
+      {
+        _id: bookingId,
+        bookingStatus: { $ne: ACCOMMODATION_BOOKING_STATUS.REJECTED },
+      },
+      {
+        bookingStatus: ACCOMMODATION_BOOKING_STATUS.REJECTED,
+        paymentStatus: ACCOMMODATION_PAYMENT_STATUS.FAILED,
+        rejectionReason: reason || "",
+      }
+    );
+
+    if (!updatedBooking) {
+      throw new ApiError(
+        "Accommodation is already rejected or was modified concurrently.",
+        HTTP_STATUS.CONFLICT
+      );
+    }
+
+    // Clean up the screenshot asset asynchronously
+    if (payment.screenshotPublicId) {
+      cloudinaryUtil.deleteAsset(payment.screenshotPublicId).catch((err) => {
+        logger.error(`Non-blocking error during Cloudinary deletion for accommodation rejection: ${err.message}`);
+      });
+    }
+
+    return updatedBooking;
   };
 
 /**
@@ -656,13 +844,23 @@ const markPaymentFailed =
       );
     }
 
-    return accommodationRepository.updateById(
-      bookingId,
+    const updatedBooking = await accommodationRepository.updateWithCondition(
       {
-        paymentStatus:
-          ACCOMMODATION_PAYMENT_STATUS.FAILED,
+        _id: bookingId,
+        paymentStatus: { $ne: ACCOMMODATION_PAYMENT_STATUS.FAILED },
       },
+      {
+        paymentStatus: ACCOMMODATION_PAYMENT_STATUS.FAILED,
+      }
     );
+
+    if (!updatedBooking) {
+      throw new ApiError(
+        'Accommodation payment is already failed or was modified concurrently.',
+        HTTP_STATUS.CONFLICT
+      );
+    }
+    return updatedBooking;
   };
 
 /**
@@ -719,21 +917,25 @@ const cancelAccommodation =
       );
     }
 
-    return accommodationRepository.updateById(
-      bookingId,
+    const updatedBooking = await accommodationRepository.updateWithCondition(
       {
-        bookingStatus:
-          ACCOMMODATION_BOOKING_STATUS.CANCELLED,
-
-        cancelledAt:
-          new Date(),
-
-        cancellationReason:
-          typeof reason === "string"
-            ? reason.trim()
-            : "",
+        _id: bookingId,
+        bookingStatus: { $ne: ACCOMMODATION_BOOKING_STATUS.CANCELLED },
       },
+      {
+        bookingStatus: ACCOMMODATION_BOOKING_STATUS.CANCELLED,
+        cancelledAt: new Date(),
+        cancellationReason: typeof reason === 'string' ? reason.trim() : '',
+      }
     );
+
+    if (!updatedBooking) {
+      throw new ApiError(
+        'Accommodation is already cancelled or was modified concurrently.',
+        HTTP_STATUS.CONFLICT
+      );
+    }
+    return updatedBooking;
   };
 
 /**
@@ -789,21 +991,25 @@ const refundAccommodation =
       );
     }
 
-    return accommodationRepository.updateById(
-      bookingId,
+    const updatedBooking = await accommodationRepository.updateWithCondition(
       {
-        paymentStatus:
-          ACCOMMODATION_PAYMENT_STATUS.REFUNDED,
-
-        refundId:
-          typeof refundId === "string"
-            ? refundId.trim()
-            : "",
-
-        refundedAt:
-          new Date(),
+        _id: bookingId,
+        paymentStatus: { $ne: ACCOMMODATION_PAYMENT_STATUS.REFUNDED },
       },
+      {
+        paymentStatus: ACCOMMODATION_PAYMENT_STATUS.REFUNDED,
+        refundId: typeof refundId === 'string' ? refundId.trim() : '',
+        refundedAt: new Date(),
+      }
     );
+
+    if (!updatedBooking) {
+      throw new ApiError(
+        'Accommodation is already refunded or was modified concurrently.',
+        HTTP_STATUS.CONFLICT
+      );
+    }
+    return updatedBooking;
   };
 
 /**
@@ -979,7 +1185,7 @@ const accommodationService =
 
     markPaymentPaid,
 
-    markPaymentFailed,
+    rejectAccommodation,
 
     cancelAccommodation,
 

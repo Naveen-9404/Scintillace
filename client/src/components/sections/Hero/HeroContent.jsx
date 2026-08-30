@@ -88,7 +88,7 @@ export default function HeroContent() {
         </span>
 
         <span className="mt-4 block text-3xl font-bold text-white md:text-4xl">
-          Where Innovation Meets Celebration
+          The Rise of Innovation
         </span>
       </motion.h1>
 
@@ -105,7 +105,10 @@ export default function HeroContent() {
         </p>
 
         <p className="text-lg font-semibold text-white md:text-xl">
-          Department of Electronics & Communication Engineering
+          Department of Electronics & Communication Engineering 
+                                  & 
+          Electronics and Communicaton House For Inquisitive Programs 
+          (E-CHIP)
         </p>
 
         <p className="text-sm text-slate-300">

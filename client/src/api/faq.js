@@ -157,7 +157,7 @@ export const faqs = [
     category: "Accommodation",
     question: "What is the accommodation charge?",
     answer:
-      "The accommodation charge is ₹100 per day. Accommodation payment is to be made in advance.",
+      "The accommodation charge is ₹200 per day. Accommodation payment is to be made in advance.",
   },
 
   {

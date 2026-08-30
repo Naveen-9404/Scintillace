@@ -81,42 +81,6 @@ const getRegistrationText = (event) => {
 
 /**
  * ============================================================
- * Student Coordinators
- * ============================================================
- *
- * Faculty coordinators are intentionally ignored.
- *
- * Supported backend structures:
- *
- * event.studentCoordinators
- * event.coordinators
- *
- * If coordinator data contains a role/type/category,
- * FACULTY entries are removed.
- */
-
-const getStudentCoordinators = (event) => {
-  const coordinators =
-    Array.isArray(event?.studentCoordinators)
-      ? event.studentCoordinators
-      : Array.isArray(event?.coordinators)
-        ? event.coordinators
-        : [];
-
-  return coordinators.filter((coordinator) => {
-    const role = String(
-      coordinator?.role ||
-        coordinator?.type ||
-        coordinator?.category ||
-        "",
-    ).toUpperCase();
-
-    return !role.includes("FACULTY");
-  });
-};
-
-/**
- * ============================================================
  * Information Card
  * ============================================================
  */
@@ -376,10 +340,6 @@ export default function EventDetails() {
     Array.isArray(event.highlights)
       ? event.highlights.filter(Boolean)
       : [];
-
-  const studentCoordinators =
-    getStudentCoordinators(event);
-
   /**
    * ==========================================================
    * Render
@@ -894,131 +854,6 @@ export default function EventDetails() {
                 "Event details will be announced soon."}
             </p>
           </div>
-        </section>
-
-        {/* ====================================================
-            STUDENT COORDINATORS
-            ==================================================== */}
-
-        <section className="mt-16">
-          <SectionHeading
-            title="Student Coordinators"
-            icon={Users}
-          />
-
-          {studentCoordinators.length > 0 ? (
-            <div
-              className="
-                grid
-                gap-5
-                md:grid-cols-2
-              "
-            >
-              {studentCoordinators.map(
-                (coordinator, index) => (
-                  <div
-                    key={
-                      coordinator?._id ||
-                      coordinator?.id ||
-                      `${coordinator?.name}-${index}`
-                    }
-                    className="
-                      rounded-3xl
-                      border border-zinc-800
-                      bg-zinc-900/70
-                      p-6
-                    "
-                  >
-                    <div className="flex items-start gap-4">
-                      <div
-                        className="
-                          flex
-                          h-14 w-14
-                          shrink-0
-                          items-center
-                          justify-center
-                          rounded-full
-                          bg-violet-500/10
-                          text-violet-400
-                        "
-                      >
-                        <Users size={24} />
-                      </div>
-
-                      <div>
-                        <h3
-                          className="
-                            text-lg
-                            font-semibold
-                            text-white
-                          "
-                        >
-                          {coordinator?.name ||
-                            coordinator?.studentName ||
-                            "Student Coordinator"}
-                        </h3>
-
-                        {coordinator?.phone && (
-                          <p
-                            className="
-                              mt-2
-                              text-sm
-                              text-zinc-400
-                            "
-                          >
-                            {coordinator.phone}
-                          </p>
-                        )}
-
-                        {coordinator?.email && (
-                          <p
-                            className="
-                              mt-1
-                              break-all
-                              text-sm
-                              text-zinc-400
-                            "
-                          >
-                            {coordinator.email}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ),
-              )}
-            </div>
-          ) : (
-            <div
-              className="
-                rounded-3xl
-                border border-zinc-800
-                bg-zinc-900/60
-                px-6
-                py-10
-                text-center
-              "
-            >
-              <Users
-                size={28}
-                className="
-                  mx-auto
-                  text-violet-400
-                "
-              />
-
-              <p
-                className="
-                  mt-4
-                  text-sm
-                  text-zinc-500
-                "
-              >
-                Student coordinator information
-                will be updated soon.
-              </p>
-            </div>
-          )}
         </section>
 
         {/* ====================================================

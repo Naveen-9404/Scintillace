@@ -196,6 +196,18 @@ const registrationSchema = new Schema(
       type: Date,
       default: null,
     },
+
+    /**
+     * ========================================================
+     * Rejection Reason
+     * ========================================================
+     */
+
+    rejectionReason: {
+      type: String,
+      trim: true,
+      default: "",
+    },
   },
   {
     timestamps: true,

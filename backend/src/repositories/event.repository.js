@@ -148,6 +148,62 @@ const updateById = (
 };
 
 /**
+ * Atomically reserve confirmed participant capacity. Unlimited events still
+ * maintain the counter for reporting, while limited events reject increments
+ * that would exceed maxParticipants.
+ */
+const reserveParticipantCapacity = (
+  eventId,
+  participantCount,
+  session = null,
+) => {
+  return Event.findOneAndUpdate(
+    {
+      _id: eventId,
+    },
+    {
+      $inc: {
+        registeredParticipantCount:
+          participantCount,
+      },
+    },
+    {
+      new: true,
+      ...(session
+        ? { session }
+        : {}),
+    },
+  ).exec();
+};
+
+const releaseParticipantCapacity = (
+  eventId,
+  participantCount,
+  session = null,
+) => {
+  return Event.findOneAndUpdate(
+    {
+      _id: eventId,
+      registeredParticipantCount: {
+        $gte: participantCount,
+      },
+    },
+    {
+      $inc: {
+        registeredParticipantCount:
+          -participantCount,
+      },
+    },
+    {
+      new: true,
+      ...(session
+        ? { session }
+        : {}),
+    },
+  ).exec();
+};
+
+/**
  * ============================================================
  * Delete Event By ID
  * ============================================================
@@ -421,6 +477,8 @@ const eventRepository =
     count,
 
     updateById,
+    reserveParticipantCapacity,
+    releaseParticipantCapacity,
     deleteById,
 
     eventExists,

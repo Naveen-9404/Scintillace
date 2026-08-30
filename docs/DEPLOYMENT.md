@@ -47,15 +47,15 @@ FestSphere should be deployed as a distributed system with separate frontend and
 - Optimize file sizes and use transformations where needed.
 - Restrict upload permissions and validate file types.
 
-## 6. Payment Provider
+## 6. Payment Flow
 
 ### Platform
-- Razorpay
+- Manual UPI & Screenshot Verification
 
 ### Recommendations
-- Configure production API keys separately from development keys.
-- Enable webhook verification and signature validation.
-- Test with sandbox before production rollout.
+- Configure Cloudinary for storing payment screenshots securely.
+- Ensure backend validates UPI reference numbers where appropriate.
+- Only authorized admins should have access to the payment verification dashboard.
 
 ## 7. Environment Variables
 
@@ -64,8 +64,6 @@ FestSphere should be deployed as a distributed system with separate frontend and
 | MONGO_URI | Database connection string |
 | JWT_SECRET | Access token secret |
 | JWT_REFRESH_SECRET | Refresh token secret |
-| RAZORPAY_KEY_ID | Razorpay public key |
-| RAZORPAY_KEY_SECRET | Razorpay secret |
 | CLOUDINARY_CLOUD_NAME | Cloudinary account name |
 | CLOUDINARY_API_KEY | Cloudinary API key |
 | CLOUDINARY_API_SECRET | Cloudinary API secret |

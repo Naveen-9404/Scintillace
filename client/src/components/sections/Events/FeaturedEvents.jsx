@@ -37,7 +37,7 @@ const featuredEvents = [
     description:
       "A hands-on learning experience combining Embedded Systems, IoT and Artificial Intelligence for students interested in emerging technologies.",
     date: "30 September",
-    fee: "₹800 / person",
+    fee: "₹600 / person",
     participation: "Individual",
     icon: Wrench,
     color: "text-cyan-300",
@@ -50,7 +50,7 @@ const featuredEvents = [
     description:
       "Present your research, technical ideas, projects and innovations through an engaging paper presentation.",
     date: "29 September",
-    fee: "₹400 / team",
+    fee: "₹200 / team",
     participation: "Team",
     icon: FileText,
     color: "text-violet-300",
@@ -63,7 +63,7 @@ const featuredEvents = [
     description:
       "Showcase your ideas and technical work through visually engaging posters and communicate your concepts effectively.",
     date: "29 September",
-    fee: "₹400 / team",
+    fee: "₹200 / team",
     participation: "Team",
     icon: Presentation,
     color: "text-fuchsia-300",
@@ -76,7 +76,7 @@ const featuredEvents = [
     description:
       "Showcase innovative hardware projects, engineering solutions, prototypes and creative ideas in electronics and emerging technologies.",
     date: "29 September",
-    fee: "₹500 / team",
+    fee: "₹300 / team",
     participation: "Team",
     icon: CircuitBoard,
     color: "text-emerald-300",

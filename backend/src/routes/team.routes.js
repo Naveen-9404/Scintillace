@@ -47,6 +47,20 @@ router.post(
 );
 
 /**
+ * Create Team Bulk
+ * POST /api/v1/teams/bulk
+ */
+router.post(
+  "/bulk",
+  authenticate,
+  authorize(
+    ROLES.STUDENT,
+    ROLES.SUPER_ADMIN,
+  ),
+  teamController.createTeamBulk,
+);
+
+/**
  * Join Team
  * POST /api/v1/teams/join
  */

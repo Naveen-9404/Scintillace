@@ -3,9 +3,11 @@ import { Router } from "express";
 import authController from "../controllers/auth.controller.js";
 
 import authenticate from "../middlewares/authenticate.js";
+import requireTrustedOrigin from "../middlewares/requireTrustedOrigin.js";
 import validate from "../middlewares/validate.js";
 
 import authValidator from "../validators/auth.validator.js";
+import { authLimiter } from "../middlewares/rateLimiters.js";
 
 const router = Router();
 
@@ -23,6 +25,8 @@ const router = Router();
 
 router.post(
   "/register",
+  authLimiter,
+  requireTrustedOrigin,
   authValidator.register,
   validate,
   authController.register,
@@ -36,6 +40,8 @@ router.post(
 
 router.post(
   "/login",
+  authLimiter,
+  requireTrustedOrigin,
   authValidator.login,
   validate,
   authController.login,
@@ -49,6 +55,8 @@ router.post(
 
 router.post(
   "/refresh",
+  authLimiter,
+  requireTrustedOrigin,
   authController.refreshToken,
 );
 

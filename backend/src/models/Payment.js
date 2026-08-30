@@ -102,44 +102,23 @@ const paymentSchema = new Schema(
     gateway: {
       type: String,
       enum: Object.values(PAYMENT_GATEWAY),
-      default: PAYMENT_GATEWAY.RAZORPAY,
+      default: PAYMENT_GATEWAY.UPI,
       required: true,
     },
 
     /**
      * ========================================================
-     * Razorpay Order ID
+     * Payment Screenshot (UPI)
      * ========================================================
      */
 
-    orderId: {
-      type: String,
-      required: true,
-      unique: true,
-      trim: true,
-      index: true,
-    },
-
-    /**
-     * ========================================================
-     * Razorpay Payment ID
-     * ========================================================
-     */
-
-    paymentId: {
+    screenshotUrl: {
       type: String,
       default: null,
       trim: true,
-      index: true,
     },
 
-    /**
-     * ========================================================
-     * Razorpay Signature
-     * ========================================================
-     */
-
-    signature: {
+    screenshotPublicId: {
       type: String,
       default: null,
       trim: true,
@@ -225,7 +204,7 @@ const paymentSchema = new Schema(
      * The status prevents duplicate emails when both:
      *
      * - frontend payment verification
-     * - Razorpay webhook
+     * - background retry job
      *
      * attempt to process the same payment.
      */

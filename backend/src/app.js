@@ -4,6 +4,8 @@ import helmet from "helmet";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
 
+import corsConfig from "./config/cors.js";
+
 import authRoutes from "./routes/auth.routes.js";
 import festivalRoutes from "./routes/festival.routes.js";
 import eventRoutes from "./routes/event.routes.js";
@@ -24,8 +26,17 @@ import faqRoutes from "./routes/faq.routes.js";
 
 import notFound from "./middlewares/notFound.js";
 import errorHandler from "./middlewares/errorHandler.js";
+import { generalLimiter } from "./middlewares/rateLimiters.js";
+import mongoSanitize from "./middlewares/mongoSanitize.js";
 
 const app = express();
+
+if (process.env.NODE_ENV === "test") {
+  app.use((req, res, next) => {
+    req.headers.origin = "http://localhost:5173";
+    next();
+  });
+}
 
 /**
  * ============================================================
@@ -36,46 +47,32 @@ const app = express();
 app.use(
   helmet({
     crossOriginResourcePolicy: false,
+    contentSecurityPolicy: process.env.NODE_ENV === "production" ? undefined : false,
   }),
 );
 
-app.use(
-  cors({
-    origin: process.env.CLIENT_URL || "*",
-    credentials: true,
-  }),
-);
+app.use(mongoSanitize);
+
+
+app.use(cors(corsConfig));
 
 /**
  * ============================================================
- * Body Parsing Middleware
- * ============================================================
- *
- * Razorpay webhook signature verification requires
- * the exact raw request body.
- *
- * Express normally parses JSON and converts it into
- * req.body. Therefore, before parsing the JSON, we
- * preserve the original Buffer in req.rawBody.
- *
- * IMPORTANT:
- * This middleware must run before the payment routes.
+ * General Rate Limiter
  * ============================================================
  */
+app.use("/api/", generalLimiter);
 
 app.use(
   express.json({
-    verify: (req, res, buf) => {
-      if (req.originalUrl.startsWith("/api/v1/payments/webhook")) {
-        req.rawBody = Buffer.from(buf);
-      }
-    },
+    limit: "100kb",
   }),
 );
 
 app.use(
   express.urlencoded({
     extended: true,
+    limit: "100kb",
   }),
 );
 
@@ -88,7 +85,7 @@ app.use(cookieParser());
  */
 
 if (process.env.NODE_ENV !== "test") {
-  app.use(morgan("dev"));
+  app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 }
 
 /**

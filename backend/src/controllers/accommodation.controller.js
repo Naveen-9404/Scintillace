@@ -198,6 +198,31 @@ const markPaymentFailed =
 
 /**
  * ============================================================
+ * Reject Accommodation Booking
+ * PATCH /api/v1/accommodation/:id/reject
+ * ============================================================
+ */
+
+const rejectAccommodation =
+  asyncHandler(async (req, res) => {
+    const booking =
+      await accommodationService.rejectAccommodation(
+        req.params.id,
+        req.body.reason || "",
+      );
+
+    res.status(
+      HTTP_STATUS.OK,
+    ).json({
+      success: true,
+      message:
+        "Accommodation rejected successfully.",
+      data: booking,
+    });
+  });
+
+/**
+ * ============================================================
  * Cancel Accommodation
  * DELETE /api/v1/accommodation/:id
  * ============================================================
@@ -352,6 +377,8 @@ const accommodationController =
     markPaymentPaid,
 
     markPaymentFailed,
+
+    rejectAccommodation,
 
     cancelAccommodation,
 

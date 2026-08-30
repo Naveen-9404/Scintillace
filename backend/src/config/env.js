@@ -86,24 +86,20 @@ const env = Object.freeze({
 
   /**
    * ============================================================
-   * Razorpay
+   * Cloudinary
    * ============================================================
    */
 
-  razorpayKeyId:
-    requireEnv(
-      process.env.RAZORPAY_KEY_ID,
-      "RAZORPAY_KEY_ID",
-    ),
+  cloudinaryCloudName:
+    process.env.CLOUDINARY_CLOUD_NAME ||
+    "",
 
-  razorpayKeySecret:
-    requireEnv(
-      process.env.RAZORPAY_KEY_SECRET,
-      "RAZORPAY_KEY_SECRET",
-    ),
+  cloudinaryApiKey:
+    process.env.CLOUDINARY_API_KEY ||
+    "",
 
-  razorpayWebhookSecret:
-    process.env.RAZORPAY_WEBHOOK_SECRET ||
+  cloudinaryApiSecret:
+    process.env.CLOUDINARY_API_SECRET ||
     "",
 
   /**

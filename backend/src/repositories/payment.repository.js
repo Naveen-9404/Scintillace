@@ -73,7 +73,7 @@ const findById = (
 };
 
 /**
- * Find payment by Razorpay order ID.
+ * Find payment by order ID.
  */
 
 const findByOrderId = (
@@ -87,7 +87,7 @@ const findByOrderId = (
 };
 
 /**
- * Find payment by Razorpay payment ID.
+ * Find payment by payment ID.
  */
 
 const findByPaymentId = (
@@ -380,8 +380,8 @@ const findByAccommodation = (
  *
  * This prevents duplicate confirmation emails when:
  *
- * 1. Frontend payment verification runs
- * 2. Razorpay webhook arrives
+ * 1. Admin manual approval runs
+ * 2. Background retry job runs
  *
  * at nearly the same time.
  */

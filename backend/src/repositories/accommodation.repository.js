@@ -438,6 +438,34 @@ const updateById = (
 
 /**
  * ============================================================
+ * Update Accommodation With Condition
+ * ============================================================
+ */
+
+const updateWithCondition = (
+  filter,
+  updateData,
+  session = null,
+) => {
+  return Accommodation.findOneAndUpdate(
+    filter,
+    updateData,
+    {
+      new: true,
+      runValidators: true,
+      ...(session
+        ? { session }
+        : {}),
+    },
+  )
+    .populate(
+      accommodationPopulate,
+    )
+    .exec();
+};
+
+/**
+ * ============================================================
  * Delete Accommodation
  * ============================================================
  */
@@ -485,6 +513,8 @@ const accommodationRepository =
     findByConfirmationCode,
 
     updateById,
+
+    updateWithCondition,
 
     deleteById,
   });

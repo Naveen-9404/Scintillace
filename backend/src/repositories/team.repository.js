@@ -1,3 +1,5 @@
+import mongoose from "mongoose";
+
 import Team from "../models/team.model.js";
 
 /**
@@ -48,6 +50,78 @@ const create = (
   ).then(
     ([team]) => team,
   );
+};
+
+/**
+ * Atomically add a member only when the team is active, the member is not
+ * already present, and the configured member limit has not been reached.
+ */
+const addMemberIfAvailable = ({
+  teamId,
+  userId,
+  role,
+}) => {
+  const member = {
+    user: new mongoose.Types.ObjectId(
+      userId,
+    ),
+    role,
+    joinedAt: new Date(),
+  };
+
+  return Team.findOneAndUpdate(
+    {
+      _id: teamId,
+      status: "ACTIVE",
+      "members.user": {
+        $ne: member.user,
+      },
+      $expr: {
+        $lt: [
+          {
+            $size: "$members",
+          },
+          "$maxMembers",
+        ],
+      },
+    },
+    [
+      {
+        $set: {
+          members: {
+            $concatArrays: [
+              "$members",
+              [member],
+            ],
+          },
+        },
+      },
+      {
+        $set: {
+          status: {
+            $cond: [
+              {
+                $gte: [
+                  {
+                    $size: "$members",
+                  },
+                  "$maxMembers",
+                ],
+              },
+              "FULL",
+              "ACTIVE",
+            ],
+          },
+        },
+      },
+    ],
+    {
+      new: true,
+      updatePipeline: true,
+    },
+  )
+    .populate(teamPopulate)
+    .exec();
 };
 
 /**
@@ -486,6 +560,7 @@ const countMembers = (
 const teamRepository =
   Object.freeze({
     create,
+    addMemberIfAvailable,
     findById,
     findDocumentById,
     findAll,

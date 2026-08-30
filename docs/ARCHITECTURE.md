@@ -14,9 +14,8 @@ flowchart LR
     C --> G[Payment Service]
     C --> H[QR / Notification Service]
     C --> I[MongoDB Atlas]
-    G --> J[Razorpay]
-    H --> K[Cloudinary]
-    H --> L[Email / SMS Provider]
+    H --> J[Cloudinary]
+    H --> K[Email / SMS Provider]
 ```
 
 ## 2. Frontend Architecture
@@ -95,12 +94,12 @@ sequenceDiagram
 
 ## 7. Payment Flow
 
-1. User proceeds to checkout after event registration.
-2. Backend creates a payment order with the payment provider.
-3. Client redirects to provider checkout or uses a secure embedded flow.
-4. Provider returns success or failure callback.
-5. Backend verifies payment signature and updates registration status.
-6. QR ticket is generated and a confirmation notification is sent.
+1. User views UPI QR and makes payment.
+2. User uploads payment screenshot and submits.
+3. Backend creates a pending payment order with the screenshot.
+4. Admin visually verifies the payment screenshot in the dashboard.
+5. Admin approves or rejects the payment.
+6. Upon approval, registration is confirmed, QR ticket is generated, and a confirmation email is sent.
 
 ## 8. QR Verification Flow
 
@@ -117,8 +116,7 @@ flowchart TB
     A[Frontend - Vercel] --> B[Backend - Render]
     B --> C[MongoDB Atlas]
     B --> D[Cloudinary]
-    B --> E[Razorpay]
-    B --> F[Email Service]
+    B --> E[Email Service]
 ```
 
 ## 10. Folder Structure
@@ -158,7 +156,7 @@ festsphere/
 | Database | MongoDB Atlas |
 | Authentication | JWT with refresh token strategy |
 | File Storage | Cloudinary |
-| Payments | Razorpay |
+| Payments | Manual UPI Verification |
 | Deployment | Vercel for frontend, Render for backend |
 | Monitoring | Sentry, logs, uptime monitoring |
 

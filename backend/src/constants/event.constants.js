@@ -78,6 +78,11 @@ export const EVENT_REGISTRATION_MODES =
     NONE: "NONE",
   });
 
+export const EVENT_REGISTRATION_METHODS =
+  Object.freeze({
+    SYSTEM: "SYSTEM",
+  });
+
 /**
  * ============================================================
  * Export
@@ -89,4 +94,5 @@ export default {
   EVENT_TYPES,
   EVENT_STATUS,
   EVENT_REGISTRATION_MODES,
+  EVENT_REGISTRATION_METHODS,
 };

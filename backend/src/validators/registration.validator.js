@@ -47,6 +47,28 @@ export const createRegistrationValidator = [
     .withMessage(
       "Invalid Team ID.",
     ),
+
+  body("screenshotUrl")
+    .optional({
+      nullable: true,
+      values: "falsy",
+    })
+    .trim()
+    .isURL()
+    .withMessage(
+      "Screenshot URL must be a valid URL.",
+    ),
+
+  body("screenshotPublicId")
+    .optional({
+      nullable: true,
+      values: "falsy",
+    })
+    .trim()
+    .isString()
+    .withMessage(
+      "Screenshot Public ID must be a string.",
+    ),
 ];
 
 /**
@@ -163,6 +185,22 @@ export const updatePaymentStatusValidator = [
     .withMessage(
       "Invalid payment status.",
     ),
+];
+
+/**
+ * ============================================================
+ * Reject Registration Validator
+ * ============================================================
+ */
+
+export const rejectRegistrationValidator = [
+  body("rejectionReason")
+    .optional()
+    .isString()
+    .withMessage("Rejection reason must be a string.")
+    .trim()
+    .isLength({ max: 255 })
+    .withMessage("Rejection reason cannot exceed 255 characters."),
 ];
 
 /**

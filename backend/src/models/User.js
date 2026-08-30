@@ -72,6 +72,18 @@ password: {
       index: true,
     },
 
+    department: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    yearOfStudy: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
     /**
      * ============================================================
      * Role

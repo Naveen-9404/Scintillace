@@ -173,11 +173,13 @@ const findByVerificationCode = (
  * ============================================================
  */
 
-const findByRegistration = (
+const findByRegistrationAndUser = (
   registrationId,
+  userId,
 ) => {
   return Certificate.findOne({
     registration: registrationId,
+    user: userId,
   })
     .populate(certificatePopulate)
     .lean()
@@ -190,11 +192,13 @@ const findByRegistration = (
  * ============================================================
  */
 
-const findByRegistrationRaw = (
+const findByRegistrationAndUserRaw = (
   registrationId,
+  userId,
 ) => {
   return Certificate.findOne({
     registration: registrationId,
+    user: userId,
   })
     .lean()
     .exec();
@@ -517,6 +521,33 @@ const findExistingRegistrationIds = (
     .exec();
 };
 
+const findCertificatesByRegistrationIds = (
+  registrationIds,
+) => {
+  return Certificate.find({
+    registration: {
+      $in: registrationIds,
+    },
+  })
+    .populate(certificatePopulate)
+    .lean()
+    .exec();
+};
+
+const findCertificatesWithVerificationCodeByRegistrationIds = (
+  registrationIds,
+) => {
+  return Certificate.find({
+    registration: {
+      $in: registrationIds,
+    },
+  })
+    .select("+verificationCode")
+    .populate(certificatePopulate)
+    .lean()
+    .exec();
+};
+
 /**
  * ============================================================
  * Check Certificate Exists
@@ -592,8 +623,8 @@ const certificateRepository =
 
     findByVerificationCode,
 
-    findByRegistration,
-    findByRegistrationRaw,
+    findByRegistrationAndUser,
+    findByRegistrationAndUserRaw,
 
     findAll,
     count,
@@ -616,6 +647,8 @@ const certificateRepository =
     countPendingEmailDelivery,
 
     findExistingRegistrationIds,
+    findCertificatesByRegistrationIds,
+    findCertificatesWithVerificationCodeByRegistrationIds,
 
     certificateExists,
     registrationCertificateExists,

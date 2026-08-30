@@ -26,6 +26,7 @@ const ACCOMMODATION_BOOKING_STATUS =
     PENDING: "Pending",
     CONFIRMED: "Confirmed",
     CANCELLED: "Cancelled",
+    REJECTED: "Rejected",
   });
 
 /**
@@ -50,7 +51,7 @@ const ACCOMMODATION_PAYMENT_STATUS =
  * ₹100 per accommodation day per participant.
  */
 
-const ACCOMMODATION_PRICE_PER_DAY = 100;
+const ACCOMMODATION_PRICE_PER_DAY = 200;
 
 export {
   ACCOMMODATION_HOSTEL_TYPES,

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CalendarDays, Loader2 } from "lucide-react";
+import { CalendarDays } from "lucide-react";
 import toast from "react-hot-toast";
 
 import { getMyRegistrations } from "../../api/registrations.api";

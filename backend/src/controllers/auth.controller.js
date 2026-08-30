@@ -11,12 +11,13 @@ import authService from "../services/auth.service.js";
  * ============================================================
  */
 
+const isProduction =
+  env.nodeEnv === "production";
+
 const cookieOptions = Object.freeze({
   httpOnly: true,
 
-  secure:
-    env.nodeEnv ===
-    "production",
+  secure: isProduction,
 
   sameSite: "lax",
 
@@ -40,9 +41,7 @@ const clearCookieOptions =
   Object.freeze({
     httpOnly: true,
 
-    secure:
-      env.nodeEnv ===
-      "production",
+    secure: isProduction,
 
     sameSite: "lax",
 

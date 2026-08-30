@@ -99,7 +99,7 @@ export const demoEvents = [
       true,
 
     registrationFee:
-      800,
+      600,
 
     currency:
       "INR",
@@ -210,7 +210,7 @@ registrationOpen: true,
       true,
 
     registrationFee:
-      400,
+      200,
 
     currency:
       "INR",
@@ -258,7 +258,7 @@ registrationOpen: true,
       "The paper must be submitted in IEEE format.",
       "The maximum number of papers that can be submitted is six.",
       "The last date for paper submission is 23 September 2026.",
-      "Registration fee is ₹400 per team.",
+      "Registration fee is ₹200 per team.",
     ],
 
     speaker: {
@@ -322,7 +322,7 @@ registrationOpen: true,
       true,
 
     registrationFee:
-      400,
+      200,
 
     currency:
       "INR",
@@ -368,7 +368,7 @@ registrationOpen: true,
     rules: [
       "A maximum of two participants are allowed per poster.",
       "The last date for poster submission is 23 September 2026.",
-      "Registration fee is ₹400 per team.",
+      "Registration fee is ₹200 per team.",
     ],
 
     speaker: {
@@ -433,7 +433,7 @@ registrationOpen: true,
       true,
 
     registrationFee:
-      500,
+      300,
 
     currency:
       "INR",
@@ -476,7 +476,7 @@ registrationOpen: true,
 
     rules: [
       "A maximum of three participants are allowed per project presentation.",
-      "Registration fee is ₹500 per team.",
+      "Registration fee is ₹300 per team.",
     ],
 
     speaker: {

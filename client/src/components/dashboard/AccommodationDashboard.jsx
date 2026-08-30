@@ -13,22 +13,13 @@ import {
   IndianRupee,
   Loader2,
   CheckCircle2,
-  XCircle,
-  ArrowRight,
 } from "lucide-react";
 
 import {
   getMyAccommodationBookings,
 } from "../../api/accommodation.api";
 
-import {
-  createAccommodationPaymentOrder,
-  verifyPayment,
-} from "../../api/payments";
 
-import {
-  loadRazorpay,
-} from "../../utils/razorpay";
 
 /**
  * ============================================================
@@ -97,262 +88,56 @@ const AccommodationDashboard = () => {
     setLoading,
   ] = useState(true);
 
-  const [
-    payingId,
-    setPayingId,
-  ] = useState(null);
-
   /**
    * ==========================================================
    * Load Bookings
    * ==========================================================
    */
 
-  const loadBookings = async () => {
-    try {
-      setLoading(true);
-
-      const data =
-        await getMyAccommodationBookings();
-
-      setBookings(
-        Array.isArray(data)
-          ? data
-          : [],
-      );
-    } catch (error) {
-      console.error(
-        "Accommodation dashboard loading error:",
-        error,
-      );
-
-      toast.error(
-        error?.response?.data?.message ||
-          "Unable to load accommodation bookings.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /**
-   * ==========================================================
-   * Initial Load
-   * ==========================================================
-   */
-
   useEffect(() => {
+    let mounted = true;
+
+    const loadBookings = async () => {
+      try {
+        setLoading(true);
+
+        const data =
+          await getMyAccommodationBookings();
+
+        if (mounted) {
+          setBookings(
+            Array.isArray(data)
+              ? data
+              : [],
+          );
+        }
+      } catch (error) {
+        console.error(
+          "Accommodation dashboard loading error:",
+          error,
+        );
+
+        if (mounted) {
+          toast.error(
+            error?.response?.data?.message ||
+              "Unable to load accommodation bookings.",
+          );
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
     loadBookings();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  /**
-   * ==========================================================
-   * Open Razorpay
-   * ==========================================================
-   */
 
-  const openPayment = async (
-    order,
-    booking,
-  ) => {
-    const loaded =
-      await loadRazorpay();
-
-    if (!loaded) {
-      throw new Error(
-        "Unable to load Razorpay Checkout. Please try again.",
-      );
-    }
-
-    return new Promise(
-      (
-        resolve,
-        reject,
-      ) => {
-        const razorpay =
-          new window.Razorpay({
-            key: order.keyId,
-
-            amount:
-              Number(order.amount) *
-              100,
-
-            currency:
-              order.currency ||
-              "INR",
-
-            name:
-              "Scintillace",
-
-            description:
-              "Accommodation Booking",
-
-            order_id:
-              order.orderId,
-
-            prefill: {
-              name:
-                booking?.user
-                  ?.fullName ||
-                "",
-
-              email:
-                booking?.user
-                  ?.email ||
-                "",
-
-              contact:
-                booking?.user
-                  ?.phone ||
-                "",
-            },
-
-            notes: {
-              accommodationId:
-                booking?._id ||
-                booking?.id ||
-                "",
-            },
-
-            theme: {
-              color:
-                "#7c3aed",
-            },
-
-            handler:
-              async (
-                response,
-              ) => {
-                try {
-                  await verifyPayment({
-                    razorpay_order_id:
-                      response.razorpay_order_id,
-
-                    razorpay_payment_id:
-                      response.razorpay_payment_id,
-
-                    razorpay_signature:
-                      response.razorpay_signature,
-                  });
-
-                  resolve(
-                    response,
-                  );
-                } catch (
-                  verificationError
-                ) {
-                  reject(
-                    verificationError,
-                  );
-                }
-              },
-
-            modal: {
-              ondismiss:
-                () => {
-                  reject(
-                    new Error(
-                      "Payment was cancelled.",
-                    ),
-                  );
-                },
-            },
-          });
-
-        razorpay.on(
-          "payment.failed",
-          (
-            response,
-          ) => {
-            reject(
-              new Error(
-                response?.error
-                  ?.description ||
-                  "Payment failed.",
-              ),
-            );
-          },
-        );
-
-        razorpay.open();
-      },
-    );
-  };
-
-  /**
-   * ==========================================================
-   * Pay For Accommodation
-   * ==========================================================
-   */
-
-  const handlePayment = async (
-    booking,
-  ) => {
-    const accommodationId =
-      booking?._id ||
-      booking?.id;
-
-    if (!accommodationId) {
-      toast.error(
-        "Accommodation booking ID is missing.",
-      );
-
-      return;
-    }
-
-    try {
-      setPayingId(
-        accommodationId,
-      );
-
-      const order =
-        await createAccommodationPaymentOrder(
-          accommodationId,
-        );
-
-      if (
-        !order?.orderId ||
-        !order?.keyId
-      ) {
-        throw new Error(
-          "Payment order was not created correctly.",
-        );
-      }
-
-      await openPayment(
-        order,
-        booking,
-      );
-
-      toast.success(
-        "Accommodation payment successful.",
-      );
-
-      await loadBookings();
-    } catch (error) {
-      console.error(
-        "Accommodation payment error:",
-        error,
-      );
-
-      const message =
-        error?.message ||
-        error?.response?.data
-          ?.message ||
-        "Accommodation payment failed.";
-
-      if (
-        message !==
-        "Payment was cancelled."
-      ) {
-        toast.error(
-          message,
-        );
-      }
-    } finally {
-      setPayingId(null);
-    }
-  };
 
   /**
    * ==========================================================
@@ -481,10 +266,6 @@ const AccommodationDashboard = () => {
               paymentStatus,
             ).toUpperCase() ===
             "PAID";
-
-          const isPaying =
-            payingId ===
-            accommodationId;
 
           return (
             <article
@@ -690,45 +471,7 @@ const AccommodationDashboard = () => {
 
                 </div>
 
-                {!isPaid && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handlePayment(
-                        booking,
-                      )
-                    }
-                    disabled={
-                      isPaying
-                    }
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
 
-                    {isPaying ? (
-                      <>
-                        <Loader2
-                          size={18}
-                          className="animate-spin"
-                        />
-
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <CreditCard
-                          size={18}
-                        />
-
-                        Pay ₹{amount}
-
-                        <ArrowRight
-                          size={18}
-                        />
-                      </>
-                    )}
-
-                  </button>
-                )}
 
                 {isPaid && (
                   <div className="flex items-center gap-2 font-semibold text-green-600">

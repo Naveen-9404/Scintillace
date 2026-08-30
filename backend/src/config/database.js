@@ -8,7 +8,11 @@ import logger from './logger.js';
  */
 export const initializeDatabase = async () => {
   try {
-    await mongoose.connect(env.mongoDbUri);
+    await mongoose.connect(env.mongoDbUri, {
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+      maxPoolSize: 10,
+    });
 
     logger.info(
       'MongoDB connected successfully.',
@@ -40,6 +44,16 @@ export const initializeDatabase = async () => {
   }
 };
 
+export const closeDatabase = async () => {
+  try {
+    await mongoose.connection.close();
+    logger.info('MongoDB connection closed.');
+  } catch (error) {
+    logger.error('Error closing MongoDB connection:', error);
+  }
+};
+
 export default Object.freeze({
   initializeDatabase,
+  closeDatabase,
 });

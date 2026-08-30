@@ -254,7 +254,7 @@ const RoomTypeCards = ({
         <div className="mx-auto mt-12 max-w-2xl rounded-2xl border border-blue-100 bg-blue-50 p-6 text-center">
 
           <p className="text-lg font-bold text-gray-900">
-            Accommodation: ₹100 per day
+            Accommodation: ₹200 per day
           </p>
 
           <p className="mt-2 text-sm leading-6 text-gray-600">

@@ -1,5 +1,5 @@
 import app from './app.js';
-import { initializeDatabase } from './config/database.js';
+import { initializeDatabase, closeDatabase } from './config/database.js';
 import config from './config/index.js';
 import logger from './config/logger.js';
 
@@ -22,6 +22,25 @@ const startServer = async () => {
       logger.error(error);
       process.exit(1);
     });
+
+    const shutdown = async (signal) => {
+      logger.info(`Received ${signal}. Shutting down gracefully...`);
+      server.close(async () => {
+        logger.info('HTTP server closed.');
+        await closeDatabase();
+        process.exit(0);
+      });
+
+      // Force close if it takes too long
+      setTimeout(() => {
+        logger.error('Could not close connections in time, forcefully shutting down');
+        process.exit(1);
+      }, 10000);
+    };
+
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on('SIGINT', () => shutdown('SIGINT'));
+
   } catch (error) {
     logger.error(error);
     process.exit(1);

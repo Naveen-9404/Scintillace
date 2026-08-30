@@ -149,6 +149,7 @@ const findAll = ({
     .sort(sort)
     .skip(pagination.skip)
     .limit(pagination.limit)
+    .lean()
     .exec();
 };
 
@@ -196,6 +197,7 @@ const findByUser = (
     })
     .skip(pagination.skip)
     .limit(pagination.limit)
+    .lean()
     .exec();
 };
 
@@ -229,6 +231,7 @@ const findByEvent = (
     })
     .skip(pagination.skip)
     .limit(pagination.limit)
+    .lean()
     .exec();
 };
 
@@ -262,6 +265,7 @@ const findByFestival = (
     })
     .skip(pagination.skip)
     .limit(pagination.limit)
+    .lean()
     .exec();
 };
 
@@ -295,6 +299,7 @@ const findByTeam = (
     })
     .skip(pagination.skip)
     .limit(pagination.limit)
+    .lean()
     .exec();
 };
 

@@ -14,6 +14,7 @@ export default [
       "coverage/**",
       "logs/**",
       "*.log",
+      "fix.cjs",
     ],
   },
 
@@ -82,6 +83,30 @@ export default [
           caughtErrorsIgnorePattern: "^_",
         },
       ],
+    },
+  },
+
+  /**
+   * ============================================================
+   * Jest / Test Configuration
+   * ============================================================
+   */
+
+  {
+    files: ["tests/**/*.js"],
+    languageOptions: {
+      globals: {
+        describe: "readonly",
+        it: "readonly",
+        test: "readonly",
+        expect: "readonly",
+        beforeAll: "readonly",
+        afterAll: "readonly",
+        beforeEach: "readonly",
+        afterEach: "readonly",
+        jest: "readonly",
+        global: "writable",
+      },
     },
   },
 ];

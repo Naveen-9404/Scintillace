@@ -170,6 +170,29 @@ export const checkInRegistration =
 
 /**
  * ============================================================
+ * Admin Payment Verification Flow
+ * ============================================================
+ */
+
+export const getPaymentByRegistration = async (id) => {
+  const response = await apiClient.get(`/v1/registrations/${id}/payment`);
+  return response.data.data.payment;
+};
+
+export const approveRegistration = async (id) => {
+  const response = await apiClient.post(`/v1/registrations/${id}/approve`);
+  return response.data.data.registration;
+};
+
+export const rejectRegistration = async (id, rejectionReason) => {
+  const response = await apiClient.post(`/v1/registrations/${id}/reject`, {
+    rejectionReason,
+  });
+  return response.data.data.registration;
+};
+
+/**
+ * ============================================================
  * Permanently Delete Registration
  * ============================================================
  *
@@ -196,6 +219,9 @@ const registrationsAdminApi =
     updatePaymentStatus,
     checkInRegistration,
     deleteRegistration,
+    getPaymentByRegistration,
+    approveRegistration,
+    rejectRegistration,
   });
 
 export default registrationsAdminApi;

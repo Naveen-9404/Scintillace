@@ -55,13 +55,3 @@ export {
   createExcelWorkbook,
   createMultiSheetWorkbook,
 } from "./excel.js";
-
-/**
- * ============================================================
- * Razorpay Utilities
- * ============================================================
- */
-
-export {
-  default as razorpayUtil,
-} from "./razorpay.js";

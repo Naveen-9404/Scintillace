@@ -11,7 +11,7 @@ const PAYMENT_FOR = Object.freeze({
 });
 
 const PAYMENT_GATEWAY = Object.freeze({
-  RAZORPAY: "RAZORPAY",
+  UPI: "UPI",
 });
 
 export {

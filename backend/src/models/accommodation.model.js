@@ -256,6 +256,18 @@ const accommodationSchema = new Schema(
 
     /**
      * ========================================================
+     * Rejection Reason
+     * ========================================================
+     */
+
+    rejectionReason: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    /**
+     * ========================================================
      * Refund
      * ========================================================
      */
@@ -437,16 +449,19 @@ accommodationSchema.pre(
 
     /**
      * --------------------------------------------------------
-     * Clear cancellation information when active.
+     * Clear cancellation and rejection information when active.
      * --------------------------------------------------------
      */
 
     if (
       this.bookingStatus !==
-      ACCOMMODATION_BOOKING_STATUS.CANCELLED
+        ACCOMMODATION_BOOKING_STATUS.CANCELLED &&
+      this.bookingStatus !==
+        ACCOMMODATION_BOOKING_STATUS.REJECTED
     ) {
       this.cancelledAt = null;
       this.cancellationReason = "";
+      this.rejectionReason = "";
     }
 
     /**

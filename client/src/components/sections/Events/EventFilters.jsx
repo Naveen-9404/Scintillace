@@ -52,6 +52,7 @@ export default function EventFilters({
    */
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSearch(filters.q || "");
   }, [filters.q]);
 

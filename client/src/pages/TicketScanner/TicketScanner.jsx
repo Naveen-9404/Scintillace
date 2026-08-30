@@ -167,6 +167,7 @@ export default function TicketScanner() {
    */
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadAssignment();
   }, []);
 

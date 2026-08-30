@@ -180,8 +180,8 @@ erDiagram
 | _id | ObjectId | Unique payment ID |
 | registrationId | ObjectId | Associated registration |
 | userId | ObjectId | Paying user |
-| orderId | String | Provider order ID |
-| provider | String | razorpay |
+| orderId | String | Legacy provider order ID |
+| provider | String | manual_upi |
 | amount | Number | Amount in rupees/paisa based on implementation |
 | currency | String | INR |
 | status | String | initiated, paid, failed, refunded |

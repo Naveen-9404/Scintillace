@@ -128,6 +128,17 @@ teamSchema.index({
   'members.user': 1,
 });
 
+// A user may belong to only one team for a given event.
+teamSchema.index(
+  {
+    event: 1,
+    'members.user': 1,
+  },
+  {
+    unique: true,
+  },
+);
+
 const Team = mongoose.model('Team', teamSchema);
 
 export default Team;

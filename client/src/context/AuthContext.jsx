@@ -58,8 +58,6 @@ export function AuthProvider({
   const restoreSession =
     useCallback(
       async () => {
-        setLoading(true);
-
         try {
           let token =
             getAccessToken();
@@ -193,6 +191,7 @@ export function AuthProvider({
    */
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     restoreSession();
   }, [restoreSession]);
 

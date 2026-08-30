@@ -302,7 +302,7 @@ const BookingSummaryCard = ({
           </div>
 
           <span className="font-medium text-slate-300">
-            ₹100 / Day
+            ₹200 / Day
           </span>
 
         </div>

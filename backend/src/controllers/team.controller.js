@@ -487,6 +487,44 @@ const getAllTeams =
 
 /**
  * ============================================================
+ * Create Team Bulk
+ * ============================================================
+ */
+
+const createTeamBulk = asyncHandler(
+  async (req, res) => {
+    const {
+      eventId,
+      teamName,
+      participants,
+    } = req.body;
+
+    const team =
+      await teamService.createTeamWithMembers({
+        leaderId:
+          req.user._id,
+        eventId,
+        teamName,
+        participants,
+      });
+
+    return res
+      .status(
+        HTTP_STATUS.CREATED,
+      )
+      .json({
+        success: true,
+        message:
+          "Team created successfully with members.",
+        data: {
+          team,
+        },
+      });
+  },
+);
+
+/**
+ * ============================================================
  * Controller Export
  * ============================================================
  */
@@ -494,6 +532,7 @@ const getAllTeams =
 const teamController =
   Object.freeze({
     createTeam,
+    createTeamBulk,
     joinTeam,
     leaveTeam,
     removeMember,

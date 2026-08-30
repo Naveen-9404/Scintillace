@@ -31,6 +31,31 @@ export const createTeam = async ({
 
 /**
  * ============================================================
+ * Create Team Bulk
+ * ============================================================
+ *
+ * POST /api/v1/teams/bulk
+ */
+
+export const createTeamBulk = async ({
+  eventId,
+  teamName,
+  participants,
+}) => {
+  const { data } = await apiClient.post(
+    "/v1/teams/bulk",
+    {
+      eventId,
+      teamName,
+      participants,
+    },
+  );
+
+  return data?.data?.team;
+};
+
+/**
+ * ============================================================
  * Join Team
  * ============================================================
  *

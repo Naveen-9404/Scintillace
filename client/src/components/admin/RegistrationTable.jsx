@@ -239,32 +239,58 @@ function RegistrationDetailsModal({
   onStatusUpdate,
   onPaymentUpdate,
   onCheckIn,
-  onDelete,
+  onApprove,
+  onReject,
   updating,
   canDelete,
+  onDelete,
 }) {
-  const [
-    status,
-    setStatus,
-  ] = useState(
-    registration?.status ||
-      "PENDING",
+  const [status, setStatus] = useState(
+    registration?.status || "PENDING"
+  );
+  const [paymentStatus, setPaymentStatus] = useState(
+    registration?.paymentStatus || "NOT_REQUIRED"
   );
 
-  const [
-    paymentStatus,
-    setPaymentStatus,
-  ] = useState(
-    registration?.paymentStatus ||
-      "NOT_REQUIRED",
+  const [paymentDetails, setPaymentDetails] = useState(null);
+  const [loadingPayment, setLoadingPayment] = useState(
+    registration?.status === "PENDING" && registration?.paymentStatus === "PENDING"
   );
+  const [rejectionReason, setRejectionReason] = useState("");
+
+  useEffect(() => {
+    let mounted = true;
+    
+    if (registration?.status === "PENDING" && registration?.paymentStatus === "PENDING") {
+      const load = async () => {
+        try {
+          const data = await registrationsAdminApi.getPaymentByRegistration(getRegistrationId(registration));
+          if (mounted) {
+            setPaymentDetails(data);
+          }
+        } catch (err) {
+          console.error("Failed to load payment details", err);
+        } finally {
+          if (mounted) {
+            setLoadingPayment(false);
+          }
+        }
+      };
+      
+      // We set the initial state as true below, so we don't need to synchronously call setState here
+      load();
+    }
+
+    return () => {
+      mounted = false;
+    };
+  }, [registration]);
 
   if (!registration) {
     return null;
   }
 
-  const team =
-    registration.team;
+  const team = registration.team;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
@@ -434,6 +460,70 @@ function RegistrationDetailsModal({
             />
 
           </div>
+
+          {registration.status === "PENDING" && registration.paymentStatus === "PENDING" && (
+            <div className="mt-6 rounded-2xl border border-blue-500/20 bg-blue-500/5 p-6">
+              <h3 className="mb-4 text-sm font-bold text-blue-300">Admin Payment Verification</h3>
+              {loadingPayment ? (
+                <div className="flex h-32 items-center justify-center">
+                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-500 border-t-transparent"></div>
+                </div>
+              ) : paymentDetails ? (
+                <div className="space-y-6">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+                    <div className="flex-1 space-y-4">
+                      <div className="rounded-xl bg-slate-900/50 p-4">
+                        <p className="text-xs text-slate-500">Payment ID</p>
+                        <p className="font-mono text-sm text-slate-300">{paymentDetails._id}</p>
+                      </div>
+                      <div className="rounded-xl bg-slate-900/50 p-4">
+                        <p className="text-xs text-slate-500">Amount to Verify</p>
+                        <p className="text-lg font-bold text-emerald-400">
+                          {paymentDetails.amount} {paymentDetails.currency}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold text-slate-400">Rejection Reason (Optional)</label>
+                        <textarea
+                          value={rejectionReason}
+                          onChange={(e) => setRejectionReason(e.target.value)}
+                          placeholder="If rejecting, please provide a reason..."
+                          className="w-full rounded-xl border border-white/10 bg-slate-900 p-3 text-sm text-white focus:border-blue-500 focus:outline-none"
+                          rows="3"
+                        />
+                      </div>
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => onApprove(registration)}
+                          disabled={updating}
+                          className="flex-1 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-500 disabled:opacity-50"
+                        >
+                          Approve Payment
+                        </button>
+                        <button
+                          onClick={() => onReject(registration, rejectionReason)}
+                          disabled={updating}
+                          className="flex-1 rounded-xl bg-red-600 px-4 py-3 text-sm font-bold text-white hover:bg-red-500 disabled:opacity-50"
+                        >
+                          Reject Payment
+                        </button>
+                      </div>
+                    </div>
+                    {paymentDetails.screenshotUrl && (
+                      <div className="w-full sm:w-1/2">
+                        <p className="mb-2 text-xs font-semibold text-slate-400">Payment Screenshot</p>
+                        <a href={paymentDetails.screenshotUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-xl border border-white/10 transition-colors hover:border-blue-500">
+                          <img src={paymentDetails.screenshotUrl} alt="Payment Proof" className="w-full object-contain bg-slate-900" style={{ maxHeight: "400px" }} />
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-slate-400">No pending payment details found.</p>
+              )}
+            </div>
+          )}
 
           <div className="mt-6 grid gap-5 md:grid-cols-3">
 
@@ -1031,6 +1121,65 @@ export default function RegistrationTable() {
       }
     };
 
+  const handleApproveRegistration = async (registration) => {
+    try {
+      setActionLoading(true);
+      setError("");
+
+      const updated = await registrationsAdminApi.approveRegistration(
+        getRegistrationId(registration)
+      );
+
+      setRegistrations((current) =>
+        current.map((item) =>
+          getRegistrationId(item) === getRegistrationId(registration)
+            ? updated
+            : item
+        )
+      );
+
+      setSelectedRegistration(updated);
+    } catch (requestError) {
+      console.error("Unable to approve registration:", requestError);
+      setError(
+        requestError?.response?.data?.message ||
+        "Unable to approve registration."
+      );
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRejectRegistration = async (registration, reason) => {
+    try {
+      setActionLoading(true);
+      setError("");
+
+      const updated = await registrationsAdminApi.rejectRegistration(
+        getRegistrationId(registration),
+        reason
+      );
+
+      setRegistrations((current) =>
+        current.map((item) =>
+          getRegistrationId(item) === getRegistrationId(registration)
+            ? updated
+            : item
+        )
+      );
+
+      setSelectedRegistration(updated);
+    } catch (requestError) {
+      console.error("Unable to reject registration:", requestError);
+      setError(
+        requestError?.response?.data?.message ||
+        "Unable to reject registration."
+      );
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const total =
     pagination?.total ??
     registrations.length;
@@ -1557,6 +1706,12 @@ export default function RegistrationTable() {
           }
           onCheckIn={
             handleCheckIn
+          }
+          onApprove={
+            handleApproveRegistration
+          }
+          onReject={
+            handleRejectRegistration
           }
           onDelete={
             handleDelete
