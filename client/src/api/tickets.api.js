@@ -24,6 +24,37 @@ export const getMyTickets = async () => {
 
 /**
  * ============================================================
+ * Get Public Tickets (Guest)
+ * ============================================================
+ *
+ * GET /api/v1/tickets/public/:registrationId
+ */
+
+export const getPublicTickets = async (registrationId, guestToken) => {
+  if (!registrationId) {
+    throw new Error("Registration ID is required.");
+  }
+  if (!guestToken) {
+    throw new Error("Guest token is required.");
+  }
+
+  const { data } = await apiClient.get(
+    `/v1/tickets/public/${registrationId}`,
+    {
+      headers: {
+        "X-Guest-Token": guestToken,
+      },
+    }
+  );
+
+  return (
+    data?.data?.tickets ||
+    []
+  );
+};
+
+/**
+ * ============================================================
  * Get Ticket QR
  * ============================================================
  *
@@ -160,6 +191,7 @@ export const checkInTicket =
 const ticketsApi =
   Object.freeze({
     getMyTickets,
+    getPublicTickets,
     getTicketQR,
     verifyTicketQR,
     checkInTicket,

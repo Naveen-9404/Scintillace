@@ -118,7 +118,7 @@ export default function Login() {
     return (
       location.state?.from
         ?.pathname ||
-      "/dashboard"
+      "/"
     );
   };
 
@@ -431,22 +431,7 @@ export default function Login() {
 
           </form>
 
-          {/* Register */}
 
-          <div className="border-t border-white/10 px-6 py-6 text-center sm:px-10">
-
-            <p className="text-sm text-slate-500">
-              Don't have an account?{" "}
-
-              <Link
-                to="/register"
-                className="font-semibold text-cyan-400 transition hover:text-cyan-300"
-              >
-                Create Account
-              </Link>
-            </p>
-
-          </div>
 
         </div>
 

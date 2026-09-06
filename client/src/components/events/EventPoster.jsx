@@ -10,7 +10,7 @@
  */
 
 const POSTER_STYLES = {
-  "Embedded & IoT with AI Workshop": {
+  "Embedded & IoT with Artificial Intelligence": {
     background:
       "bg-gradient-to-br from-cyan-950 via-slate-950 to-violet-950",
 
@@ -144,7 +144,7 @@ function formatTitle(title = "") {
    *
    * Example:
    *
-   * Embedded & IoT with AI Workshop
+   * Embedded & IoT with Artificial Intelligence
    *
    * becomes:
    *

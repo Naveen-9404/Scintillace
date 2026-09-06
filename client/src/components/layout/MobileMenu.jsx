@@ -232,7 +232,7 @@ export default function MobileMenu({
           )}
 
           <p className="mt-5 text-center text-xs text-slate-600">
-            Scintillace • JNTUA College of Engineering, Pulivendula
+            Scintillace • JNTUA College of Engineering Pulivendula (Autonomous)
           </p>
 
         </div>

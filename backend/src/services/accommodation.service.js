@@ -91,11 +91,24 @@ const calculateAccommodationDays = (
  * The amount supplied by the frontend is NEVER trusted.
  */
 
+const bookingLocks = new Set();
+
 const createAccommodation = async (
   userId,
   registrationId,
   bookingData,
+  options = { isGuest: false },
 ) => {
+  const lockKey = `${registrationId}-${bookingData.teamMemberId || 'null'}`;
+  if (bookingLocks.has(lockKey)) {
+    throw new ApiError(
+      "Accommodation already booked for this registration.",
+      HTTP_STATUS.CONFLICT,
+    );
+  }
+  bookingLocks.add(lockKey);
+
+  try {
   /**
    * ----------------------------------------------------------
    * 1. Find registration
@@ -120,19 +133,21 @@ const createAccommodation = async (
    * ----------------------------------------------------------
    */
 
-  const registrationUserId =
-    registration.user?._id ||
-    registration.user;
+  if (!options.isGuest) {
+    const registrationUserId =
+      registration.user?._id ||
+      registration.user;
 
-  if (
-    !registrationUserId ||
-    registrationUserId.toString() !==
-      userId.toString()
-  ) {
-    throw new ApiError(
-      "You are not authorized to book accommodation for this registration.",
-      HTTP_STATUS.FORBIDDEN,
-    );
+    if (
+      !registrationUserId ||
+      registrationUserId.toString() !==
+        userId.toString()
+    ) {
+      throw new ApiError(
+        "You are not authorized to book accommodation for this registration.",
+        HTTP_STATUS.FORBIDDEN,
+      );
+    }
   }
 
   /**
@@ -159,12 +174,50 @@ const createAccommodation = async (
 
   if (
     registration.status &&
-    registration.status !== "REGISTERED"
+    registration.status !== "REGISTERED" &&
+    registration.status !== "PENDING"
   ) {
     throw new ApiError(
       "Accommodation can only be booked for an active registration.",
       HTTP_STATUS.BAD_REQUEST,
     );
+  }
+
+  let {
+    hostelType,
+    checkInDate,
+    checkOutDate,
+    currency = "INR",
+    remarks = "",
+    screenshotUrl = null,
+    screenshotPublicId = null,
+    teamMemberId = null,
+  } = bookingData;
+
+  /**
+   * ----------------------------------------------------------
+   * 4b. Enforce Team Member Identity
+   * ----------------------------------------------------------
+   */
+  if (registration.team) {
+    if (!teamMemberId) {
+      throw new ApiError(
+        "teamMemberId is required for team accommodation.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+    const isMemberValid = registration.team.members?.some(
+      (member) => member._id.toString() === teamMemberId.toString()
+    );
+    if (!isMemberValid) {
+      throw new ApiError(
+        "Invalid teamMemberId. The member does not belong to this team.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+  } else {
+    // Individual registration MUST have null teamMemberId
+    teamMemberId = null;
   }
 
   /**
@@ -174,8 +227,9 @@ const createAccommodation = async (
    */
 
   const existingBooking =
-    await accommodationRepository.findByRegistration(
+    await accommodationRepository.findByRegistrationAndTeamMember(
       registrationId,
+      teamMemberId,
     );
 
   if (existingBooking) {
@@ -184,22 +238,6 @@ const createAccommodation = async (
       HTTP_STATUS.CONFLICT,
     );
   }
-
-  /**
-   * ----------------------------------------------------------
-   * 6. Extract request data
-   * ----------------------------------------------------------
-   */
-
-  const {
-    hostelType,
-    checkInDate,
-    checkOutDate,
-    currency = "INR",
-    remarks = "",
-    screenshotUrl = null,
-    screenshotPublicId = null,
-  } = bookingData;
 
   /**
    * ----------------------------------------------------------
@@ -316,12 +354,21 @@ const createAccommodation = async (
    * ----------------------------------------------------------
    */
 
-  try {
+  // Removed duplicate try block
     const accommodation = await accommodationRepository.create({
-      user: userId,
+      user: userId || null,
+
+      participantName: registration.participantName,
+      participantEmail: registration.participantEmail,
+      participantPhone: registration.participantPhone,
+      collegeId: registration.collegeId,
+      department: registration.department,
+      yearOfStudy: registration.yearOfStudy,
 
       registration:
         registration._id,
+
+      teamMemberId,
 
       event:
         registration.event?._id ||
@@ -368,7 +415,7 @@ const createAccommodation = async (
      */
 
     const paymentData = {
-      user: userId,
+      user: userId || null,
       accommodation: accommodation._id,
       paymentFor: PAYMENT_FOR.ACCOMMODATION,
       amount,
@@ -390,6 +437,9 @@ const createAccommodation = async (
       );
     }
     throw error;
+  } finally {
+    const lockKey = `${registrationId}-${bookingData.teamMemberId || 'null'}`;
+    bookingLocks.delete(lockKey);
   }
 };
 
@@ -524,6 +574,136 @@ const getMyAccommodation =
       },
     );
   };
+
+/**
+ * ============================================================
+ * Create Guest Accommodation (Standalone)
+ * ============================================================
+ */
+
+const createGuestAccommodation = async (bookingData) => {
+  let {
+    participantName,
+    participantEmail,
+    participantPhone,
+    collegeId,
+    department,
+    yearOfStudy,
+    hostelType,
+    checkInDate,
+    checkOutDate,
+    currency = "INR",
+    remarks = "",
+    guestTokenHash,
+  } = bookingData;
+
+  if (
+    !Object.values(ACCOMMODATION_HOSTEL_TYPES).includes(hostelType)
+  ) {
+    throw new ApiError(
+      "Invalid accommodation hostel type. Select either Boys Hostel or Girls Hostel.",
+      HTTP_STATUS.BAD_REQUEST,
+    );
+  }
+
+  const startDate = new Date(checkInDate);
+  const endDate = new Date(checkOutDate);
+
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+    throw new ApiError("Invalid check-in or check-out date.", HTTP_STATUS.BAD_REQUEST);
+  }
+
+  if (endDate <= startDate) {
+    throw new ApiError("Check-out date must be after check-in date.", HTTP_STATUS.BAD_REQUEST);
+  }
+
+  const accommodationDays = calculateAccommodationDays(startDate, endDate);
+
+  if (!Number.isInteger(accommodationDays) || accommodationDays < 1) {
+    throw new ApiError("Accommodation must be booked for at least one day.", HTTP_STATUS.BAD_REQUEST);
+  }
+
+  const amount = accommodationDays * ACCOMMODATION_PRICE_PER_DAY;
+
+  const normalizedCurrency = currency.toString().trim().toUpperCase();
+
+  if (normalizedCurrency !== "INR") {
+    throw new ApiError("Accommodation payments are currently supported only in INR.", HTTP_STATUS.BAD_REQUEST);
+  }
+
+  const accommodation = await accommodationRepository.create({
+    participantName: participantName || "",
+    participantEmail: participantEmail || "",
+    participantPhone: participantPhone || "",
+    collegeId: collegeId || "",
+    department: department || "",
+    yearOfStudy: yearOfStudy || "",
+    hostelType,
+    checkInDate: startDate,
+    checkOutDate: endDate,
+    accommodationDays,
+    amount,
+    currency: normalizedCurrency,
+    paymentStatus: ACCOMMODATION_PAYMENT_STATUS.PENDING,
+    bookingStatus: ACCOMMODATION_BOOKING_STATUS.PENDING,
+    guestTokenHash,
+    remarks: typeof remarks === "string" ? remarks.trim() : "",
+  });
+
+  return accommodation;
+};
+
+/**
+ * ============================================================
+ * Upload Guest Payment Screenshot
+ * ============================================================
+ */
+
+const uploadGuestPaymentScreenshot = async (bookingId, screenshotUrl, screenshotPublicId) => {
+  const accommodation = await accommodationRepository.findById(bookingId);
+
+  if (!accommodation) {
+    throw new ApiError("Accommodation booking not found.", HTTP_STATUS.NOT_FOUND);
+  }
+
+  if (accommodation.paymentStatus !== ACCOMMODATION_PAYMENT_STATUS.PENDING) {
+    throw new ApiError("Payment screenshot can only be uploaded for pending payments.", HTTP_STATUS.BAD_REQUEST);
+  }
+
+  if (!screenshotUrl) {
+    throw new ApiError("Screenshot URL is required.", HTTP_STATUS.BAD_REQUEST);
+  }
+
+  // Create or Update Payment document
+  let payment;
+  if (accommodation.payment) {
+    payment = await paymentRepository.findById(accommodation.payment);
+    if (payment) {
+      payment.screenshotUrl = screenshotUrl;
+      payment.screenshotPublicId = screenshotPublicId;
+      await payment.save();
+    }
+  }
+
+  if (!payment) {
+    payment = await paymentRepository.create({
+      user: accommodation.user || null,
+      accommodation: accommodation._id,
+      paymentFor: PAYMENT_FOR.ACCOMMODATION,
+      amount: accommodation.amount,
+      currency: accommodation.currency,
+      gateway: PAYMENT_GATEWAY.UPI,
+      screenshotUrl,
+      screenshotPublicId,
+      status: PAYMENT_STATUS.PENDING,
+    });
+    
+    accommodation.payment = payment._id;
+    await accommodation.save();
+  }
+
+  return accommodation;
+};
 
 /**
  * ============================================================
@@ -879,6 +1059,7 @@ const cancelAccommodation =
     bookingId,
     userId,
     reason = "",
+    options = { isGuest: false },
   ) => {
     const booking =
       await accommodationRepository.findById(
@@ -892,19 +1073,21 @@ const cancelAccommodation =
       );
     }
 
-    const bookingUserId =
-      booking.user?._id ||
-      booking.user;
+    if (!options.isGuest) {
+      const bookingUserId =
+        booking.user?._id ||
+        booking.user;
 
-    if (
-      !bookingUserId ||
-      bookingUserId.toString() !==
-        userId.toString()
-    ) {
-      throw new ApiError(
-        "You are not authorized to cancel this booking.",
-        HTTP_STATUS.FORBIDDEN,
-      );
+      if (
+        !bookingUserId ||
+        bookingUserId.toString() !==
+          userId.toString()
+      ) {
+        throw new ApiError(
+          "You are not authorized to cancel this booking.",
+          HTTP_STATUS.FORBIDDEN,
+        );
+      }
     }
 
     if (
@@ -1174,6 +1357,8 @@ const getAccommodationAvailability =
 const accommodationService =
   Object.freeze({
     createAccommodation,
+    createGuestAccommodation,
+    uploadGuestPaymentScreenshot,
 
     getAllAccommodation,
 

@@ -24,6 +24,49 @@ const getPagination = (req) => {
 
 /**
  * ============================================================
+ * Get Public Tickets (Guest)
+ * ============================================================
+ *
+ * GET /api/v1/tickets/public/:registrationId
+ */
+
+const getPublicTickets = asyncHandler(async (req, res) => {
+  const { registrationId } = req.params;
+
+  if (!req.registration || req.registration._id.toString() !== registrationId) {
+    throw new ApiError(HTTP_STATUS.FORBIDDEN, "Access denied to these tickets.");
+  }
+
+  const mongoose = await import("mongoose");
+  const Ticket = mongoose.default.model("Ticket");
+  
+  const tickets = await Ticket.find({ registration: registrationId }).select("+qrToken").populate("event festival").lean().exec();
+
+  const qrService = (await import("../services/qr.service.js")).default;
+
+  const publicTickets = await Promise.all(
+    tickets.map(async (ticket) => {
+      const { qrCode: qrDataURL } = await qrService.generateTicketQR(ticket);
+      const safeTicket = toPublicTicket(ticket);
+      
+      return {
+        ...safeTicket,
+        qrCode: qrDataURL,
+        teamMemberId: ticket.teamMemberId,
+      };
+    })
+  );
+
+  return ApiResponse.success(
+    res,
+    { tickets: publicTickets },
+    "Tickets retrieved successfully.",
+    HTTP_STATUS.OK,
+  );
+});
+
+/**
+ * ============================================================
  * Public Ticket Response
  * ============================================================
  */
@@ -519,6 +562,7 @@ const deleteTicket = asyncHandler(
 const ticketController =
   Object.freeze({
     createTicket,
+    getPublicTickets,
 
     getTicketById,
     getTicketByNumber,

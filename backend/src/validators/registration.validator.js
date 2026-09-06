@@ -279,6 +279,55 @@ export const registrationQueryValidator = [
  * ============================================================
  */
 
+export const publicRegistrationValidator = [
+  body("eventId")
+    .notEmpty()
+    .withMessage("Event ID is required.")
+    .isMongoId()
+    .withMessage("Invalid Event ID."),
+  body("participantName")
+    .notEmpty()
+    .withMessage("Participant name is required.")
+    .trim()
+    .isString(),
+  body("participantEmail")
+    .notEmpty()
+    .withMessage("Participant email is required.")
+    .trim()
+    .isEmail()
+    .withMessage("Invalid email address."),
+  body("participantPhone")
+    .notEmpty()
+    .withMessage("Participant phone is required.")
+    .trim()
+    .isString(),
+  body("collegeId")
+    .notEmpty()
+    .withMessage("College ID is required.")
+    .trim()
+    .isString(),
+  body("department")
+    .optional()
+    .trim()
+    .isString(),
+  body("yearOfStudy")
+    .optional()
+    .trim()
+    .isString(),
+  body("teamName")
+    .optional()
+    .trim()
+    .isString(),
+  body("projectTitle")
+    .optional()
+    .trim()
+    .isString(),
+  body("members")
+    .optional()
+    .isArray()
+    .withMessage("Members must be an array.")
+];
+
 const registrationValidator =
   Object.freeze({
     createRegistrationValidator,
@@ -289,6 +338,7 @@ const registrationValidator =
     updateRegistrationStatusValidator,
     updatePaymentStatusValidator,
     registrationQueryValidator,
+    publicRegistrationValidator,
   });
 
 export default registrationValidator;

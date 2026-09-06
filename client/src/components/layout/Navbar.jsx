@@ -16,6 +16,7 @@ import {
 
 import { Container } from "../ui";
 import MobileMenu from "./MobileMenu";
+import AnnouncementTicker from "../common/AnnouncementTicker";
 
 import useActiveSection from "../../hooks/useActiveSection";
 import { useAuth } from "../../hooks/useAuth";
@@ -90,10 +91,7 @@ export default function Navbar() {
     location.pathname ===
     "/announcements";
 
-  const isDashboardPage =
-    location.pathname.startsWith(
-      "/dashboard",
-    );
+
 
   const isAdminPage =
     location.pathname.startsWith(
@@ -184,12 +182,13 @@ export default function Navbar() {
           ===================================================== */}
 
       <header
-        className={`fixed inset-x-0 top-0 z-50 transition-all duration-500 ${
+        className={`fixed inset-x-0 top-0 z-50 transition-all duration-500 flex flex-col ${
           isScrolled
             ? "border-b border-white/10 bg-slate-950/80 shadow-2xl shadow-black/30 backdrop-blur-2xl"
             : "bg-transparent"
         }`}
       >
+        <AnnouncementTicker />
         <Container className="flex h-24 items-center justify-between">
 
           {/* =================================================
@@ -343,28 +342,11 @@ export default function Navbar() {
                   Login
                 </Link>
 
-                <Link
-                  to="/register"
-                  className="rounded-xl bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-cyan-500/30 transition-all duration-300 hover:-translate-y-0.5 hover:scale-105 hover:shadow-cyan-400/60"
-                >
-                  Register Now
-                  <span className="ml-1">
-                    →
-                  </span>
-                </Link>
+
               </>
             ) : (
               <>
-                <Link
-                  to="/dashboard"
-                  className={`rounded-xl border px-5 py-2.5 text-sm font-semibold transition-all duration-300 ${
-                    isDashboardPage
-                      ? "border-cyan-400 bg-cyan-400/10 text-cyan-300"
-                      : "border-slate-700 bg-slate-900/40 text-slate-300 hover:border-cyan-400 hover:bg-slate-800 hover:text-cyan-300"
-                  }`}
-                >
-                  Dashboard
-                </Link>
+
 
                 {isAdmin && (
                   <Link
@@ -445,23 +427,13 @@ export default function Navbar() {
             type: "route",
           },
 
-          ...(isAuthenticated
+          ...(isAdmin
             ? [
                 {
-                  name: "Dashboard",
-                  id: "/dashboard",
+                  name: "Admin Panel",
+                  id: "/admin",
                   type: "route",
                 },
-
-                ...(isAdmin
-                  ? [
-                      {
-                        name: "Admin Panel",
-                        id: "/admin",
-                        type: "route",
-                      },
-                    ]
-                  : []),
               ]
             : []),
         ]}

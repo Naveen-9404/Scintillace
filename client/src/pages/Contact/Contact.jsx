@@ -34,11 +34,11 @@ const FACULTY_COORDINATOR = {
   designation:
     "Professor, Dept. Of ECE & Faculty Advisor Of E-CHIP",
   department:
-    "Dept. Of ECE, JNTUACE, Pulivendula",
+    "Dept. Of ECE, JNTUA College of Engineering Pulivendula (Autonomous)",
 };
 
 const COLLEGE_ADDRESS =
-  "JNTUA College of Engineering (Autonomous), Pulivendula, 516 390, Y.S.R. District, Andhra Pradesh";
+  "JNTUA College of Engineering Pulivendula (Autonomous), 516 390, Y.S.R. District, Andhra Pradesh";
 
 const GOOGLE_MAPS_URL =
   "https://www.google.com/maps/place/JNTUA+College+of+Engineering,+Pulivendula/@14.447279,78.2360077,17z/data=!4m6!3m5!1s0x3bb3eb8f7c5d4623:0xedbb309928332524!8m2!3d14.4472734!4d78.2360056!16s%2Fm%2F065_gv_?hl=en&entry=ttu&g_ep=EgoyMDI2MDgxNy4wIKXMDSoASAFQAw%3D%3D";
@@ -303,8 +303,7 @@ export default function Contact() {
             </h2>
 
             <p className="mt-3 text-sm text-slate-400">
-              JNTUA College of Engineering
-              (Autonomous), Pulivendula
+              JNTUA College of Engineering Pulivendula (Autonomous)
             </p>
           </div>
         </section>

@@ -6,9 +6,11 @@ import {
   setAccessToken,
 } from "../services/tokenStorage";
 
-const baseURL =
-  import.meta.env.VITE_API_BASE_URL ||
-  "http://localhost:5000/api";
+const baseURL = import.meta.env.VITE_API_BASE_URL;
+
+if (!baseURL) {
+  throw new Error("VITE_API_BASE_URL is not defined in the environment.");
+}
 
 const apiClient = axios.create({
   baseURL,

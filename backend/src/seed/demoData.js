@@ -30,7 +30,7 @@ export const festivalData = {
     new Date("2026-09-30"),
 
   venue:
-    "JNTUA College of Engineering, Pulivendula",
+    "JNTUA College of Engineering Pulivendula (Autonomous)",
 
   status: "PUBLISHED",
 
@@ -66,13 +66,13 @@ const PRESENTATION_TOPICS = [
 export const demoEvents = [
   /**
    * ==========================================================
-   * 1. EMBEDDED & IoT WITH AI WORKSHOP
+   * 1. EMBEDDED & IoT WITH ARTIFICIAL INTELLIGENCE
    * ==========================================================
    */
 
   {
     title:
-      "Embedded & IoT with AI Workshop",
+      "Embedded & IoT with Artificial Intelligence",
 
     description:
       "A hands-on workshop focused on Embedded Systems, Internet of Things, and Artificial Intelligence, designed to provide participants with practical exposure to emerging technologies.",

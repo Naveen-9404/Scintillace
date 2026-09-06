@@ -19,12 +19,14 @@ const setAccessToken = (token) => {
     ACCESS_TOKEN_KEY,
     token,
   );
+  localStorage.setItem("scintillace_auth_session", "true");
 };
 
 const clearAccessToken = () => {
   localStorage.removeItem(
     ACCESS_TOKEN_KEY,
   );
+  localStorage.removeItem("scintillace_auth_session");
 };
 
 const tokenStorage =

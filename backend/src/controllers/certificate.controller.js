@@ -1,4 +1,6 @@
 import certificateService from "../services/certificate.service.js";
+import certificatePdfService from "../services/certificatePdf.service.js";
+import certificateRepository from "../repositories/certificate.repository.js";
 
 import asyncHandler from "../utils/asyncHandler.js";
 import ApiResponse from "../utils/ApiResponse.js";
@@ -39,14 +41,11 @@ const toPublicCertificate = (
   issuedAt:
     certificate.issuedAt,
 
-  participant:
-    certificate.user
-      ? {
-          fullName:
-            certificate.user
-              .fullName,
-        }
-      : null,
+  participantName:
+    certificate.participantName ||
+    (certificate.user
+      ? certificate.user.fullName
+      : ""),
 
   event:
     certificate.event,
@@ -102,6 +101,100 @@ const createCertificate =
         HTTP_STATUS.CREATED,
       );
     },
+  );
+
+/**
+ * ============================================================
+ * Get Public Certificates
+ * ============================================================
+ */
+
+const getPublicCertificates =
+  asyncHandler(
+    async (
+      req,
+      res,
+    ) => {
+      // req.registration is populated by verifyGuestToken
+      const registrationId = req.params.registrationId;
+
+      if (req.registration._id.toString() !== registrationId) {
+        return ApiResponse.error(
+          res,
+          "Unauthorized certificate access.",
+          HTTP_STATUS.FORBIDDEN,
+        );
+      }
+
+      const certificates = await certificateRepository.findAll({
+        filter: { registration: registrationId },
+        limit: 100
+      });
+
+      return ApiResponse.success(
+        res,
+        {
+          certificates: certificates.map(toPublicCertificate)
+        },
+        "Certificates retrieved successfully.",
+        HTTP_STATUS.OK,
+      );
+    }
+  );
+
+/**
+ * ============================================================
+ * Download Public Certificate PDF
+ * ============================================================
+ */
+
+const downloadPublicCertificate =
+  asyncHandler(
+    async (
+      req,
+      res,
+    ) => {
+      const registrationId = req.params.registrationId;
+      const certificateId = req.params.certificateId;
+
+      if (req.registration._id.toString() !== registrationId) {
+        return res
+          .status(HTTP_STATUS.FORBIDDEN)
+          .json({ success: false, message: "Unauthorized certificate access." });
+      }
+
+      const certificate = await certificateRepository.findById(certificateId);
+
+      console.log("CERT DOWNLOAD:", { 
+         certId: certificateId, 
+         regId: registrationId, 
+         foundCert: certificate ? true : false,
+         certRegId: certificate?.registration?._id?.toString()
+      });
+
+      if (!certificate || certificate.registration._id.toString() !== registrationId) {
+        return res
+          .status(HTTP_STATUS.NOT_FOUND)
+          .json({ success: false, message: "Certificate not found." });
+      }
+
+      console.log("CERT STATUS IN DOWNLOAD:", certificate.status);
+      if (certificate.status !== "ISSUED" && certificate.status !== "EMAILED") {
+        return res
+          .status(HTTP_STATUS.BAD_REQUEST)
+          .json({ success: false, message: "Certificate is not yet issued." });
+      }
+
+      const pdfBuffer = await certificatePdfService.generateCertificatePdf(certificate);
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="scintillace-certificate-${certificate.certificateNumber}.pdf"`
+      );
+      
+      return res.status(HTTP_STATUS.OK).send(pdfBuffer);
+    }
   );
 
 /**
@@ -521,6 +614,9 @@ const certificateController =
     revokeCertificate,
 
     deleteCertificate,
+
+    getPublicCertificates,
+    downloadPublicCertificate,
   });
 
 export default certificateController;

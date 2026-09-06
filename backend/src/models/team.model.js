@@ -12,7 +12,44 @@ const teamMemberSchema = new mongoose.Schema(
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
+      required: false,
+    },
+
+    participantName: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+
+    participantEmail: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      default: '',
+    },
+
+    participantPhone: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+
+    collegeId: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+
+    department: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+
+    yearOfStudy: {
+      type: String,
+      trim: true,
+      default: '',
     },
 
     role: {
@@ -25,10 +62,8 @@ const teamMemberSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
-  },
-  {
-    _id: false,
   }
+  // _id: true (default) allows stable identities
 );
 
 /**
@@ -42,6 +77,12 @@ const teamSchema = new mongoose.Schema(
       trim: true,
       minlength: 3,
       maxlength: 50,
+    },
+
+    projectTitle: {
+      type: String,
+      trim: true,
+      default: '',
     },
 
     event: {
@@ -59,7 +100,7 @@ const teamSchema = new mongoose.Schema(
     leader: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
+      required: false,
     },
 
     members: {
@@ -128,15 +169,11 @@ teamSchema.index({
   'members.user': 1,
 });
 
-// A user may belong to only one team for a given event.
 teamSchema.index(
   {
     event: 1,
     'members.user': 1,
-  },
-  {
-    unique: true,
-  },
+  }
 );
 
 const Team = mongoose.model('Team', teamSchema);

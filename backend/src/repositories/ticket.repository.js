@@ -367,6 +367,25 @@ const registrationTicketExists = (
 
 /**
  * ============================================================
+ * Ticket Exists By Query
+ * ============================================================
+ */
+
+const ticketExistsByQuery = (
+  queryObj,
+  session = null,
+) => {
+  const query = Ticket.exists(queryObj);
+
+  if (session) {
+    query.session(session);
+  }
+
+  return query.then(Boolean);
+};
+
+/**
+ * ============================================================
  * Ticket Repository Export
  * ============================================================
  */
@@ -404,6 +423,7 @@ const ticketRepository = Object.freeze({
 
   ticketExists,
   registrationTicketExists,
+  ticketExistsByQuery,
 });
 
 export default ticketRepository;

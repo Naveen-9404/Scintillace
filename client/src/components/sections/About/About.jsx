@@ -48,7 +48,7 @@ const departments = [
   },
   {
     icon: GraduationCap,
-    title: "JNTUA College of Engineering, Pulivendula",
+    title: "JNTUA College of Engineering Pulivendula (Autonomous)",
     description:
       "A platform that encourages students to learn, innovate, collaborate, and showcase their talents.",
   },
@@ -121,7 +121,7 @@ export default function About() {
             </p>
 
             <p className="mt-1 text-slate-400">
-              JNTUA College of Engineering, Pulivendula
+              JNTUA College of Engineering Pulivendula (Autonomous)
             </p>
           </div>
 

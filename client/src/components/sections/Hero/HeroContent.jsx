@@ -67,29 +67,33 @@ export default function HeroContent() {
           Welcome to
         </span>
 
-        <span
-          className="
-            mt-3
-            block
-            bg-gradient-to-r
-            from-cyan-300
-            via-sky-300
-            to-violet-400
-            bg-clip-text
-            text-5xl
-            font-black
-            text-transparent
-            drop-shadow-[0_0_40px_rgba(34,211,238,.35)]
-            md:text-6xl
-            xl:text-7xl
-          "
-        >
-          SCINTILLACE
-        </span>
+        <div className="mt-3 inline-flex flex-col">
+          <span
+            className="
+              bg-gradient-to-r
+              from-cyan-300
+              via-sky-300
+              to-violet-400
+              bg-clip-text
+              text-5xl
+              font-black
+              text-transparent
+              drop-shadow-[0_0_40px_rgba(34,211,238,.35)]
+              md:text-6xl
+              xl:text-7xl
+            "
+          >
+            SCINTILLACE
+          </span>
 
-        <span className="mt-4 block text-3xl font-bold text-white md:text-4xl">
-          The Rise of Innovation
-        </span>
+          <div className="mt-3 flex w-full items-center justify-center gap-3 px-1 sm:gap-4 sm:px-2">
+            <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-cyan-400"></div>
+            <span className="shrink-0 text-lg italic tracking-wide text-cyan-200/90 font-light md:text-xl lg:text-2xl">
+              The Rise of Innovation
+            </span>
+            <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-violet-400"></div>
+          </div>
+        </div>
       </motion.h1>
 
       {/* =====================================================
@@ -98,22 +102,29 @@ export default function HeroContent() {
 
       <motion.div
         variants={fadeUp}
-        className="mt-6 flex flex-col gap-1"
+        className="mt-8 flex flex-col gap-2"
       >
-        <p className="text-sm uppercase tracking-[0.25em] text-cyan-300">
-          Organized by
+        <p className="text-sm font-semibold uppercase tracking-[0.25em] text-cyan-400">
+          ORGANIZED BY
         </p>
 
-        <p className="text-lg font-semibold text-white md:text-xl">
-          Department of Electronics & Communication Engineering 
-                                  & 
-          Electronics and Communicaton House For Inquisitive Programs 
-          (E-CHIP)
-        </p>
+        <div className="mt-1 flex flex-col items-center lg:items-start text-center lg:text-left text-base font-medium text-white md:text-lg">
+          <span className="block">
+            Department of Electronics and Communication Engineering
+          </span>
+          <span className="my-1 block w-full text-center text-cyan-400 font-bold">
+            &
+          </span>
+          <span className="block">
+            Electronics and Communication House for Inclusive Programs (E-CHIP)
+          </span>
+        </div>
 
-        <p className="text-sm text-slate-300">
-          JNTUA College of Engineering, Pulivendula
-        </p>
+        <div className="mt-3 flex justify-center lg:justify-start">
+          <div className="inline-flex items-center rounded-full border border-cyan-500/30 bg-cyan-500/10 px-5 py-2 text-sm font-semibold tracking-wide text-cyan-100 shadow-[0_0_15px_rgba(34,211,238,0.15)] md:text-base">
+            JNTUA College of Engineering Pulivendula (Autonomous)
+          </div>
+        </div>
       </motion.div>
 
       {/* =====================================================

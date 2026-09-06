@@ -172,12 +172,22 @@ const createCertificate =
       registration,
       event,
       festival,
+      teamMemberId,
     } = certificateData;
 
-    validateObjectId(
-      user,
-      "User ID",
-    );
+    if (user) {
+      validateObjectId(
+        user,
+        "User ID",
+      );
+    }
+
+    if (teamMemberId) {
+      validateObjectId(
+        teamMemberId,
+        "Team Member ID",
+      );
+    }
 
     validateObjectId(
       registration,
@@ -231,25 +241,52 @@ const createCertificate =
     }
 
     const existing =
-      await certificateRepository.registrationCertificateExists(
+      await certificateRepository.registrationMemberCertificateExists(
         registration,
+        teamMemberId,
       );
 
     if (existing) {
       throw new ApiError(
-        "A certificate already exists for this registration.",
+        "A certificate already exists for this registration member.",
         HTTP_STATUS.CONFLICT,
       );
     }
 
-    const participantName =
-      (
-        registrationRecord
-          .participantName ||
-        registrationRecord
-          .user?.fullName ||
-        ""
-      ).trim();
+    let participantName = "";
+    let participantEmail = "";
+
+    if (teamMemberId) {
+      const member = registrationRecord.team?.members?.find(
+        (m) => m._id.toString() === teamMemberId.toString()
+      );
+      if (member) {
+        participantName = member.participantName || member.user?.fullName || "";
+        participantEmail = member.participantEmail || member.user?.email || "";
+      }
+    }
+
+    if (!participantName) {
+      participantName =
+        (
+          registrationRecord
+            .participantName ||
+          registrationRecord
+            .user?.fullName ||
+          ""
+        ).trim();
+    }
+
+    if (!participantEmail) {
+      participantEmail =
+        (
+          registrationRecord
+            .participantEmail ||
+          registrationRecord
+            .user?.email ||
+          ""
+        ).trim();
+    }
 
     if (!participantName) {
       throw new ApiError(
@@ -257,13 +294,6 @@ const createCertificate =
         HTTP_STATUS.BAD_REQUEST,
       );
     }
-
-    const participantEmail =
-      (
-        registrationRecord
-          .user?.email ||
-        ""
-      ).trim();
 
     const certificateNumber =
       generateCertificateNumber();
@@ -888,8 +918,8 @@ const disburseFestivalCertificates =
     const certificateMap = new Map();
     for (const cert of existingCertificatesList) {
       const regIdStr = cert.registration?._id?.toString() || cert.registration?.toString();
-      const userIdStr = cert.user?._id?.toString() || cert.user?.toString();
-      certificateMap.set(`${regIdStr}_${userIdStr}`, cert);
+      const teamMemberIdStr = cert.teamMemberId?._id?.toString() || cert.teamMemberId?.toString() || "individual";
+      certificateMap.set(`${regIdStr}_${teamMemberIdStr}`, cert);
     }
 
     const result = {
@@ -909,16 +939,27 @@ const disburseFestivalCertificates =
 
       let participants = [];
       if (registration.team && registration.team.members && registration.team.members.length > 0) {
-        participants = registration.team.members.map(m => m.user);
+        participants = registration.team.members.map(m => ({
+          teamMemberId: m._id,
+          user: m.user || null,
+          participantName: m.participantName || m.user?.fullName || "",
+          participantEmail: m.participantEmail || m.user?.email || ""
+        }));
       } else {
-        participants = [registration.user];
+        participants = [{
+          teamMemberId: null,
+          user: registration.user || null,
+          participantName: registration.participantName || registration.user?.fullName || "",
+          participantEmail: registration.participantEmail || registration.user?.email || ""
+        }];
       }
 
-      for (const participantUser of participants) {
-        const userIdStr = participantUser._id?.toString() || participantUser.toString();
+      for (const participant of participants) {
+        const teamMemberIdStr = participant.teamMemberId?.toString() || "individual";
+        const userIdStr = participant.user?._id?.toString() || participant.user?.toString() || null;
 
         try {
-          let certificate = certificateMap.get(`${regIdStr}_${userIdStr}`);
+          let certificate = certificateMap.get(`${regIdStr}_${teamMemberIdStr}`);
 
           /**
            * ------------------------------------------------------
@@ -939,7 +980,7 @@ const disburseFestivalCertificates =
 
               result.details.push({
                 registrationId,
-                userId: userIdStr,
+                teamMemberId: teamMemberIdStr,
 
                 status:
                   "SKIPPED",
@@ -963,7 +1004,7 @@ const disburseFestivalCertificates =
 
               result.details.push({
                 registrationId,
-                userId: userIdStr,
+                teamMemberId: teamMemberIdStr,
 
                 status:
                   "SKIPPED",
@@ -1002,7 +1043,7 @@ const disburseFestivalCertificates =
                 },
               );
 
-              certificateWithCode = certificateMap.get(`${regIdStr}_${userIdStr}`) || 
+              certificateWithCode = certificateMap.get(`${regIdStr}_${teamMemberIdStr}`) || 
                 await certificateRepository.findByIdWithVerificationCode(
                   certificate._id,
                 );
@@ -1040,10 +1081,8 @@ const disburseFestivalCertificates =
             certificate =
               await createCertificate(
                 {
-                  user:
-                    participantUser._id ||
-                    participantUser.id ||
-                    participantUser,
+                  teamMemberId: participant.teamMemberId,
+                  user: participant.user,
 
                   registration:
                     registration._id,
@@ -1056,10 +1095,7 @@ const disburseFestivalCertificates =
                     registration.festival?._id ||
                     registration.festival,
 
-                  participantName:
-                    participantUser.fullName ||
-                    registration.participantName ||
-                    "",
+                  participantName: participant.participantName,
 
                   certificateType:
                     "PARTICIPATION",
@@ -1103,7 +1139,7 @@ const disburseFestivalCertificates =
 
           result.details.push({
             registrationId,
-            userId: userIdStr,
+            teamMemberId: teamMemberIdStr,
 
             status:
               "EMAILED",
@@ -1124,9 +1160,9 @@ const disburseFestivalCertificates =
 
           try {
             const existingCertificate =
-              await certificateRepository.findByRegistrationAndUser(
+              await certificateRepository.findByRegistrationAndTeamMemberId(
                 registrationId,
-                userIdStr,
+                participant.teamMemberId,
               );
 
             if (
@@ -1147,7 +1183,7 @@ const disburseFestivalCertificates =
 
           result.details.push({
             registrationId,
-            userId: userIdStr,
+            teamMemberId: teamMemberIdStr,
             error: error.message || "Failed to disburse certificate.",
           });
         }

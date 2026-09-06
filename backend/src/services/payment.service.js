@@ -1,35 +1,26 @@
-import mongoose from "mongoose";
+
 
 import paymentRepository from "../repositories/payment.repository.js";
 import registrationRepository from "../repositories/registration.repository.js";
-import accommodationRepository from "../repositories/accommodation.repository.js";
-import eventRepository from "../repositories/event.repository.js";
 import ticketRepository from "../repositories/ticket.repository.js";
 
-import ticketService from "./ticket.service.js";
+
 
 
 import receiptUtil from "../utils/receipt.js";
 import emailUtil from "../utils/email.js";
+import cloudinaryUtil from "../utils/cloudinary.js";
 
 import ApiError from "../utils/ApiError.js";
 import HTTP_STATUS from "../constants/httpStatus.js";
-import ROLES from "../constants/roles.js";
+
 
 import {
   PAYMENT_STATUS,
   PAYMENT_FOR,
 } from "../constants/payment.constants.js";
 
-import {
-  REGISTRATION_STATUS,
-  PAYMENT_STATUS as REGISTRATION_PAYMENT_STATUS,
-} from "../constants/registration.constants.js";
 
-import {
-  ACCOMMODATION_BOOKING_STATUS,
-  ACCOMMODATION_PAYMENT_STATUS,
-} from "../constants/accommodation.constants.js";
 
 import logger from "../utils/logger.js";
 
@@ -353,14 +344,17 @@ const sendAccommodationPaymentConfirmation =
       const user =
         payment.user || {};
 
-      if (!user.email) {
-        throw new Error(
-          "Registered user's email address could not be found.",
-        );
-      }
-
       const accommodation =
         payment.accommodation;
+
+      const toEmail = user.email || accommodation?.participantEmail;
+      const toName = user.fullName || accommodation?.participantName;
+
+      if (!toEmail) {
+        throw new Error(
+          "Participant's email address could not be found.",
+        );
+      }
 
       const event =
         accommodation.event ||
@@ -410,10 +404,10 @@ const sendAccommodationPaymentConfirmation =
       const emailResult =
         await emailUtil.sendAccommodationConfirmation({
           to:
-            user.email,
+            toEmail,
 
           participantName:
-            user.fullName,
+            toName,
 
           eventName:
             event?.title,
@@ -657,6 +651,93 @@ const getMyPayments =
 
 /**
  * ============================================================
+ * Submit Payment Screenshot (Guest Flow)
+ * ============================================================
+ */
+const submitPaymentScreenshot = async ({
+  registration,
+  screenshotUrl,
+  screenshotPublicId,
+  paymentFor = PAYMENT_FOR.EVENT,
+  accommodationId = null,
+}) => {
+  if (paymentFor === PAYMENT_FOR.EVENT && registration.paymentStatus !== PAYMENT_STATUS.PENDING) {
+    throw new ApiError("Event registration payment is not pending.", HTTP_STATUS.BAD_REQUEST);
+  }
+
+  try {
+    const parsedUrl = new URL(screenshotUrl);
+    if (parsedUrl.hostname !== "res.cloudinary.com") {
+      throw new ApiError("Screenshot URL must be a valid Cloudinary URL.", HTTP_STATUS.BAD_REQUEST);
+    }
+  } catch (err) {
+    throw new ApiError("Invalid screenshot URL format.", HTTP_STATUS.BAD_REQUEST);
+  }
+
+  let payment;
+
+  if (paymentFor === PAYMENT_FOR.ACCOMMODATION) {
+    if (!accommodationId) {
+      throw new ApiError("Accommodation ID is required for accommodation payments.", HTTP_STATUS.BAD_REQUEST);
+    }
+    
+    // Look up existing pending payment for this accommodation
+    payment = await paymentRepository.findPendingByAccommodation(accommodationId);
+
+    if (payment) {
+      if (payment.screenshotPublicId) {
+        cloudinaryUtil.deleteAsset(payment.screenshotPublicId).catch((err) => {
+          logger.error(`Failed to delete old screenshot from Cloudinary: ${err.message}`);
+        });
+      }
+      payment = await paymentRepository.updateById(payment._id, {
+        screenshotUrl,
+        screenshotPublicId,
+        status: PAYMENT_STATUS.PENDING
+      });
+    } else {
+      throw new ApiError("No pending payment found for this accommodation.", HTTP_STATUS.NOT_FOUND);
+    }
+  } else {
+    // Find if a payment document already exists for this registration (Event)
+    payment = await paymentRepository.findByRegistration(registration._id);
+
+    if (payment) {
+      if (payment.status !== PAYMENT_STATUS.PENDING && payment.status !== PAYMENT_STATUS.FAILED) {
+        throw new ApiError("Cannot update screenshot for this payment status.", HTTP_STATUS.BAD_REQUEST);
+      }
+      // Delete old screenshot if it exists
+      if (payment.screenshotPublicId) {
+        cloudinaryUtil.deleteAsset(payment.screenshotPublicId).catch((err) => {
+          logger.error(`Failed to delete old screenshot from Cloudinary: ${err.message}`);
+        });
+      }
+      payment = await paymentRepository.updateById(payment._id, {
+        screenshotUrl,
+        screenshotPublicId,
+        status: PAYMENT_STATUS.PENDING
+      });
+    } else {
+      // Create new payment document
+      const paymentData = {
+        user: null,
+        registration: registration._id,
+        paymentFor: PAYMENT_FOR.EVENT,
+        amount: registration.event.registrationFee,
+        currency: registration.event.currency || "INR",
+        screenshotUrl,
+        screenshotPublicId,
+        status: PAYMENT_STATUS.PENDING
+      };
+      payment = await paymentRepository.create(paymentData);
+    }
+  }
+
+  return payment;
+};
+
+/**
+ * ============================================================
  * Get All Payments
  * ============================================================
  */
@@ -716,6 +797,7 @@ const paymentService = Object.freeze({
   getAllPayments,
   sendEventRegistrationConfirmation,
   sendAccommodationPaymentConfirmation,
+  submitPaymentScreenshot,
 });
 
 export default paymentService;

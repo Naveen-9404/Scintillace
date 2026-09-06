@@ -197,7 +197,7 @@ const AccommodationHero = () => {
               />
 
               <span>
-                JNTUA College of Engineering, Pulivendula
+                JNTUA College of Engineering Pulivendula (Autonomous)
               </span>
 
             </div>

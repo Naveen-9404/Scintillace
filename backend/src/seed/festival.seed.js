@@ -11,7 +11,7 @@ export const festivalData = {
 
   endDate: new Date("2026-08-17"),
 
-  venue: "JNTUA College of Engineering Pulivendula",
+  venue: "JNTUA College of Engineering Pulivendula (Autonomous)",
 
   status: "PUBLISHED",
 

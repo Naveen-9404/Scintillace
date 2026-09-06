@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import crypto from "crypto";
 
 import registrationRepository from "../repositories/registration.repository.js";
 import eventRepository from "../repositories/event.repository.js";
@@ -35,6 +36,7 @@ import {
 
 import {
   TEAM_STATUS,
+  TEAM_MEMBER_ROLE,
 } from "../constants/team.constants.js";
 
 /**
@@ -111,8 +113,8 @@ const getFestivalId = (
   }
 
   if (
-    typeof event.festival ===
-    "object"
+    typeof event.festival === "object" &&
+    event.festival._id
   ) {
     return event.festival._id;
   }
@@ -1118,21 +1120,15 @@ const updatePaymentStatus =
       try {
         const getReferenceId = (reference) => reference?._id || reference;
         
-        let ticket = await ticketRepository.findByRegistrationWithQrToken(updatedRegistration._id);
-        if (!ticket) {
-          await ticketService.createTicket({
-            registration: updatedRegistration._id,
-            user: getReferenceId(updatedRegistration.user),
-            event: getReferenceId(updatedRegistration.event),
-            festival: getReferenceId(updatedRegistration.festival),
-          });
-          ticket = await ticketRepository.findByRegistrationWithQrToken(updatedRegistration._id);
+        let tickets = await mongoose.model("Ticket").find({ registration: updatedRegistration._id }).select("+qrToken").lean();
+        if (tickets.length === 0) {
+          tickets = await ticketService.createTicketsForRegistration(updatedRegistration._id);
         }
 
-        const user = await User.findById(getReferenceId(updatedRegistration.user)).lean();
+        const user = updatedRegistration.user ? await User.findById(getReferenceId(updatedRegistration.user)).lean() : null;
         const event = await eventRepository.findByIdRaw(getReferenceId(updatedRegistration.event));
 
-        if (user && user.email && event && ticket && ticket.qrToken) {
+        if (event && tickets.length > 0) {
           let payment = await paymentRepository.findPendingByRegistration(updatedRegistration._id);
           
           if (!payment) {
@@ -1145,24 +1141,50 @@ const updatePaymentStatus =
             };
           }
 
-          const pdfBuffer = await receiptUtil.generateRegistrationPDF({
-            payment,
-            registration: updatedRegistration,
-            ticket,
-          });
+          const RegistrationModel = mongoose.model("Registration");
+          const fullRegistration = await RegistrationModel.findById(updatedRegistration._id).populate("team").lean();
 
-          await emailUtil.sendRegistrationConfirmation({
-            to: user.email,
-            participantName: user.fullName,
-            eventName: event.title,
-            ticketNumber: ticket.ticketNumber,
-            pdfBuffer,
-          });
+          for (const ticket of tickets) {
+            let participantEmail = "";
+            let participantName = "";
+
+            if (ticket.teamMemberId && fullRegistration.team && fullRegistration.team.members) {
+              const member = fullRegistration.team.members.find(m => m._id.toString() === ticket.teamMemberId.toString());
+              if (member) {
+                participantEmail = member.participantEmail;
+                participantName = member.participantName || "Team Member";
+              }
+            } else {
+              participantEmail = fullRegistration.participantEmail;
+              participantName = fullRegistration.participantName || "Participant";
+            }
+
+            if (!participantEmail && user && user.email) {
+              participantEmail = user.email;
+              participantName = user.fullName || participantName;
+            }
+
+            if (participantEmail && ticket.qrToken) {
+              const pdfBuffer = await receiptUtil.generateRegistrationPDF({
+                payment,
+                registration: fullRegistration,
+                ticket,
+              });
+
+              await emailUtil.sendRegistrationConfirmation({
+                to: participantEmail,
+                participantName,
+                eventName: event.title,
+                ticketNumber: ticket.ticketNumber,
+                pdfBuffer,
+              });
+            }
+          }
           
-          logger.info(`Manual registration confirmation email sent successfully for registration ${updatedRegistration._id}.`);
+          logger.info(`Registration confirmation emails sent successfully for registration ${updatedRegistration._id}.`);
         }
       } catch (error) {
-        logger.error(`Manual registration confirmation email failed for registration ${updatedRegistration._id}: ${error.message}`);
+        logger.error(`Registration confirmation email failed for registration ${updatedRegistration._id}: ${error.message}`);
       }
     }
 
@@ -1435,13 +1457,247 @@ const deleteRegistration =
 
 /**
  * ============================================================
+ * Create Public Registration (Guest)
+ * ============================================================
+ */
+
+const createPublicRegistration = async (guestData) => {
+  const { eventId, participantName, participantEmail, participantPhone, collegeId, department, yearOfStudy, teamName, projectTitle, members } = guestData;
+
+  const event = await validateEventForRegistration(eventId);
+
+  let participantCount = 1;
+
+  if (event.type === EVENT_TYPES.TEAM) {
+    if (!teamName || !members || !Array.isArray(members) || members.length < 1) {
+      throw new ApiError("Team name and members are required for team events.", HTTP_STATUS.BAD_REQUEST);
+    }
+    
+    const lowerTitle = event.title?.toLowerCase() || "";
+    const requiresProjectTitle = lowerTitle.includes("paper") || lowerTitle.includes("poster") || lowerTitle.includes("hardware");
+    
+    if (requiresProjectTitle && (!projectTitle || !projectTitle.trim())) {
+      throw new ApiError("Project / Topic Title is required for this event.", HTTP_STATUS.BAD_REQUEST);
+    }
+
+    const configuredTeamSize = Number(event.teamSize);
+    const maxTeamSize = Number.isFinite(configuredTeamSize) && configuredTeamSize > 0 ? Math.min(configuredTeamSize, 3) : 3;
+
+    if (members.length > maxTeamSize) {
+      throw new ApiError(`Team exceeds the maximum team size of ${maxTeamSize}.`, HTTP_STATUS.BAD_REQUEST);
+    }
+
+    // Duplicate check for team name
+    const existingTeam = await teamRepository.findByEventAndName(event._id, teamName);
+    if (existingTeam) {
+      throw new ApiError("A team with this name is already registered for this event.", HTTP_STATUS.CONFLICT);
+    }
+
+    // Duplicate check for team leader email
+    const leaderEmail = participantEmail;
+    const isRegistered = await teamRepository.findActiveByLeaderEmailAndEvent(event._id, leaderEmail);
+    if (isRegistered) {
+      throw new ApiError(`Participant with email ${leaderEmail} has already created a team for this event.`, HTTP_STATUS.CONFLICT);
+    }
+
+    participantCount = members.length;
+
+    // Use transaction for atomic creation
+    const session = await mongoose.startSession();
+    try {
+      session.startTransaction();
+
+      const inviteCode = "PUBLIC" + Math.floor(1000 + Math.random() * 9000); // Dummy for public
+      const team = new mongoose.model('Team')({
+        teamName: teamName.trim(),
+        projectTitle: projectTitle ? projectTitle.trim() : "",
+        event: event._id,
+        festival: getFestivalId(event),
+        inviteCode,
+        maxMembers: maxTeamSize,
+        status: TEAM_STATUS.ACTIVE,
+        members: members.map((m, index) => ({
+          participantName: m.participantName,
+          participantEmail: m.participantEmail,
+          participantPhone: m.participantPhone,
+          collegeId: m.collegeId,
+          department: m.department,
+          yearOfStudy: m.yearOfStudy,
+          role: index === 0 ? TEAM_MEMBER_ROLE.LEADER : TEAM_MEMBER_ROLE.MEMBER
+        }))
+      });
+
+      await team.save({ session });
+
+      const rawToken = crypto.randomBytes(32).toString("hex");
+      const guestTokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+      const guestTokenExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
+
+      const registrationData = {
+        user: null,
+        participantName,
+        participantEmail,
+        participantPhone,
+        collegeId,
+        department,
+        yearOfStudy,
+        event: event._id,
+        festival: getFestivalId(event),
+        team: team._id,
+        status: REGISTRATION_STATUS.PENDING, // Payment is phase 4, but we keep it pending so user can pay later. Wait, for free events it's REGISTERED.
+        paymentStatus: event.isPaid ? PAYMENT_STATUS.PENDING : PAYMENT_STATUS.NOT_REQUIRED,
+        guestTokenHash,
+        guestTokenExpiresAt,
+      };
+      
+      if (!event.isPaid) {
+          registrationData.status = REGISTRATION_STATUS.REGISTERED;
+      }
+
+      const registration = new mongoose.model('Registration')(registrationData);
+      await registration.save({ session });
+
+      await session.commitTransaction();
+      session.endSession();
+
+      return {
+        paymentRequired: event.isPaid,
+        registration,
+        participantCount,
+        amount: event.registrationFee,
+        currency: event.currency || "INR",
+        isRetry: false,
+        guestToken: rawToken,
+      };
+    } catch (error) {
+      await session.abortTransaction();
+      session.endSession();
+      throw error;
+    }
+
+  } else {
+    // Individual Event Duplicate Check
+    const existingRegistration = await registrationRepository.findActiveByEmailAndEvent(participantEmail, event._id);
+
+    if (existingRegistration) {
+      throw new ApiError("You are already registered for this event.", HTTP_STATUS.CONFLICT);
+    }
+
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    const guestTokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+    const guestTokenExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
+
+    const registrationData = {
+      user: null,
+      participantName,
+      participantEmail,
+      participantPhone,
+      collegeId,
+      department,
+      yearOfStudy,
+      event: event._id,
+      festival: getFestivalId(event),
+      team: null,
+      status: event.isPaid ? REGISTRATION_STATUS.PENDING : REGISTRATION_STATUS.REGISTERED,
+      paymentStatus: event.isPaid ? PAYMENT_STATUS.PENDING : PAYMENT_STATUS.NOT_REQUIRED,
+      guestTokenHash,
+      guestTokenExpiresAt,
+    };
+
+    const registration = await registrationRepository.create(registrationData);
+
+    return {
+      paymentRequired: event.isPaid,
+      registration,
+      participantCount: 1,
+      amount: event.registrationFee,
+      currency: event.currency || "INR",
+      isRetry: false,
+      guestToken: rawToken,
+    };
+  }
+};
+
+/**
+ * ============================================================
  * Service Export
  * ============================================================
  */
 
+const retryTicketGeneration = async (registrationId) => {
+  const Registration = mongoose.model("Registration");
+  const Ticket = mongoose.model("Ticket");
+
+  const registration = await Registration.findById(registrationId)
+    .populate("event")
+    .populate({
+      path: "team",
+      populate: { path: "members" }
+    });
+
+  if (!registration) {
+    throw new ApiError("Registration not found.", HTTP_STATUS.NOT_FOUND);
+  }
+
+  if (registration.paymentStatus !== PAYMENT_STATUS.PAID) {
+    throw new ApiError("Cannot generate tickets for unpaid registration.", HTTP_STATUS.BAD_REQUEST);
+  }
+
+  // Generate or fetch existing tickets
+  const ticketService = await import("../services/ticket.service.js");
+  const tickets = await ticketService.default.createTicketsForRegistration(registration._id);
+
+  // Re-send emails
+  try {
+    const emailPromises = tickets.map(async (ticket) => {
+      if (ticket._isRecovered) {
+        return; // Skip sending duplicate email for a ticket that already existed
+      }
+      
+      let recipientEmail = null;
+      let participantName = null;
+      if (registration.event.type === EVENT_TYPES.INDIVIDUAL) {
+        recipientEmail = registration.participantEmail;
+        participantName = registration.participantName || "Participant";
+      } else if (registration.event.type === EVENT_TYPES.TEAM && ticket.teamMemberId) {
+        const member = registration.team.members.id(ticket.teamMemberId);
+        if (member) {
+          recipientEmail = member.participantEmail;
+          participantName = member.participantName || "Team Member";
+        }
+      }
+
+      if (recipientEmail) {
+        await emailUtil.sendRegistrationConfirmation(
+          recipientEmail,
+          {
+            eventName: registration.event.name,
+            festivalName: registration.event.festival ? "Festival" : "",
+            participantName,
+            registrationId: registration._id,
+            qrCode: ticket.qrCode,
+          }
+        );
+      }
+    });
+
+    await Promise.all(emailPromises);
+    logger.info(`Recovery: Registration confirmation emails sent successfully for registration ${registration._id}.`);
+  } catch (emailError) {
+    logger.error(
+      `Recovery: Failed to send registration confirmation emails for registration ${registration._id}:`,
+      emailError
+    );
+    throw new ApiError("Tickets created/fetched, but emails failed to send.", HTTP_STATUS.INTERNAL_SERVER_ERROR);
+  }
+
+  return { ticketsCount: tickets.length };
+};
+
 const registrationService =
   Object.freeze({
     createRegistration,
+    createPublicRegistration,
 
     getAllRegistrations,
     getRegistrationById,
@@ -1463,6 +1719,7 @@ const registrationService =
     checkInRegistration,
 
     deleteRegistration,
+    retryTicketGeneration,
   });
 
 export default registrationService;

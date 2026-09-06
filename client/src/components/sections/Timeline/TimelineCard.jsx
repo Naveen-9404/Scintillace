@@ -153,6 +153,7 @@ export default function TimelineCard({
                 mt-4
                 leading-7
                 text-slate-400
+                whitespace-pre-line
               "
             >
               {description}

@@ -80,6 +80,33 @@ export const downloadReceipt =
 
 /**
  * ============================================================
+ * Submit Payment Screenshot (Guest)
+ * ============================================================
+ *
+ * POST /api/v1/payments/public/:id/screenshot
+ */
+
+export const submitGuestPaymentScreenshot =
+  async (registrationId, payload, guestToken) => {
+    if (!registrationId || !guestToken) {
+      throw new Error("Registration ID and Guest Token are required.");
+    }
+
+    const { data } = await apiClient.post(
+      `/v1/payments/public/${registrationId}/screenshot`,
+      payload,
+      {
+        headers: {
+          "X-Guest-Token": guestToken,
+        },
+      }
+    );
+
+    return data.data;
+  };
+
+/**
+ * ============================================================
  * Payment API
  * ============================================================
  */
@@ -88,4 +115,5 @@ export default Object.freeze({
   getMyPayments,
   getPayment,
   downloadReceipt,
+  submitGuestPaymentScreenshot,
 });

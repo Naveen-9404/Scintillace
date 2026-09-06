@@ -5,6 +5,7 @@ import ticketController from "../controllers/ticket.controller.js";
 import authenticate from "../middlewares/authenticate.js";
 import authorize from "../middlewares/authorize.js";
 import validateRequest from "../middlewares/validateRequest.js";
+import verifyGuestToken from "../middlewares/verifyGuestToken.js";
 
 import ROLES from "../constants/roles.js";
 
@@ -58,6 +59,20 @@ router.post(
   qrPayloadValidator,
   validateRequest,
   ticketController.verifyQrToken,
+);
+
+/**
+ * ------------------------------------------------------------
+ * Get Public Tickets By Registration (Guest)
+ * ------------------------------------------------------------
+ *
+ * GET /api/v1/tickets/public/:registrationId
+ */
+
+router.get(
+  "/public/:registrationId",
+  verifyGuestToken,
+  ticketController.getPublicTickets,
 );
 
 /**

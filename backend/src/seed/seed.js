@@ -23,7 +23,7 @@ import {
  */
 
 const FINAL_EVENT_TITLES = [
-  "Embedded & IoT with AI Workshop",
+  "Embedded & IoT with Artificial Intelligence",
   "Paper Presentation",
   "Poster Presentation",
   "Hardware Expo",

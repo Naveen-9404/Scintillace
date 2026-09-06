@@ -21,7 +21,39 @@ export const registerForEvent =
         "/v1/registrations",
         payload,
       );
+    return data.data;
+  };
 
+/**
+ * Register for an Event (Public / Accountless)
+ */
+export const publicRegisterForEvent =
+  async (payload) => {
+    // Send request without authorization requirement
+    // (If token exists, it might be sent by apiClient but is ignored by the public endpoint)
+    const { data } =
+      await apiClient.post(
+        "/v1/registrations/public",
+        payload,
+      );
+
+    return data.data;
+  };
+
+/**
+ * Get Public Registration Status (Guest)
+ */
+export const getGuestRegistrationStatus =
+  async (id, guestToken) => {
+    const { data } =
+      await apiClient.get(
+        `/v1/registrations/public/${id}/status`,
+        {
+          headers: {
+            "X-Guest-Token": guestToken
+          }
+        }
+      );
     return data.data;
   };
 

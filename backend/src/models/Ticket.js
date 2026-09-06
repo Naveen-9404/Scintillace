@@ -23,17 +23,26 @@ const { Schema, model } = mongoose;
 
 const ticketSchema = new Schema(
   {
-    /**
-     * --------------------------------------------------------
-     * Registration
-     * --------------------------------------------------------
-     */
-
     registration: {
       type: Schema.Types.ObjectId,
       ref: "Registration",
       required: true,
-      unique: true,
+      index: true,
+    },
+
+    /**
+     * --------------------------------------------------------
+     * Team Member
+     * --------------------------------------------------------
+     *
+     * Points to the specific member inside Team.members if this
+     * is a team ticket. Null for individual tickets.
+     */
+
+    teamMemberId: {
+      type: Schema.Types.ObjectId,
+      required: false,
+      default: null,
       index: true,
     },
 
@@ -46,7 +55,7 @@ const ticketSchema = new Schema(
     user: {
       type: Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      required: false,
       index: true,
     },
 
@@ -245,6 +254,11 @@ ticketSchema.pre("validate", function () {
  * Indexes
  * ============================================================
  */
+
+ticketSchema.index({
+  registration: 1,
+  teamMemberId: 1,
+}, { unique: true });
 
 ticketSchema.index({
   event: 1,

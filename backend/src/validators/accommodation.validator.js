@@ -83,6 +83,81 @@ export const createAccommodationValidator = [
 
 /**
  * ============================================================
+ * Create Guest Accommodation Booking
+ * ============================================================
+ */
+
+export const createGuestAccommodationValidator = [
+  body("participantName")
+    .trim()
+    .notEmpty()
+    .withMessage("Participant name is required.")
+    .isLength({ max: 100 })
+    .withMessage("Name cannot exceed 100 characters."),
+
+  body("participantEmail")
+    .trim()
+    .notEmpty()
+    .withMessage("Participant email is required.")
+    .isEmail()
+    .withMessage("Invalid email address."),
+
+  body("participantPhone")
+    .trim()
+    .notEmpty()
+    .withMessage("Participant phone is required.")
+    .isLength({ max: 20 })
+    .withMessage("Phone cannot exceed 20 characters."),
+
+  body("collegeId")
+    .trim()
+    .notEmpty()
+    .withMessage("College/Institution is required.")
+    .isLength({ max: 200 })
+    .withMessage("College name cannot exceed 200 characters."),
+
+  body("department")
+    .trim()
+    .notEmpty()
+    .withMessage("Department is required.")
+    .isLength({ max: 100 })
+    .withMessage("Department cannot exceed 100 characters."),
+
+  body("yearOfStudy")
+    .trim()
+    .notEmpty()
+    .withMessage("Year of study is required.")
+    .isLength({ max: 50 })
+    .withMessage("Year of study cannot exceed 50 characters."),
+
+  body("hostelType")
+    .trim()
+    .notEmpty()
+    .withMessage("Hostel type is required.")
+    .isIn(Object.values(ACCOMMODATION_HOSTEL_TYPES))
+    .withMessage("Invalid accommodation hostel type."),
+
+  body("checkInDate")
+    .notEmpty()
+    .withMessage("Check-in date is required.")
+    .isISO8601()
+    .withMessage("Invalid check-in date."),
+
+  body("checkOutDate")
+    .notEmpty()
+    .withMessage("Check-out date is required.")
+    .isISO8601()
+    .withMessage("Invalid check-out date."),
+
+  body("remarks")
+    .optional()
+    .trim()
+    .isLength({ max: 1000 })
+    .withMessage("Remarks cannot exceed 1000 characters."),
+];
+
+/**
+ * ============================================================
  * Accommodation ID
  * ============================================================
  */

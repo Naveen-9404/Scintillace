@@ -435,6 +435,11 @@ function RegistrationDetailsModal({
                     "Individual registration",
                 ],
                 [
+                  "Project Title",
+                  team?.projectTitle ||
+                    "—",
+                ],
+                [
                   "Leader",
                   team?.leader
                     ?.fullName ||

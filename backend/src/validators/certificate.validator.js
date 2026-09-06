@@ -134,6 +134,14 @@ const certificateIdValidator = [
     ),
 ];
 
+const downloadCertificateValidator = [
+  param("certificateId")
+    .isMongoId()
+    .withMessage(
+      "Invalid Certificate ID.",
+    ),
+];
+
 /**
  * ============================================================
  * Certificate Number Validator
@@ -249,6 +257,7 @@ export {
   createCertificateValidator,
 
   certificateIdValidator,
+  downloadCertificateValidator,
   certificateNumberValidator,
   verificationCodeValidator,
 

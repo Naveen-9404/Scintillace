@@ -5,11 +5,14 @@ import accommodationController from "../controllers/accommodation.controller.js"
 import authenticate from "../middlewares/authenticate.js";
 import authorize from "../middlewares/authorize.js";
 import validate from "../middlewares/validate.js";
+import verifyGuestToken from "../middlewares/verifyGuestToken.js";
+import verifyAccommodationGuestToken from "../middlewares/verifyAccommodationGuestToken.js";
 
 import ROLES from "../constants/roles.js";
 
 import {
   createAccommodationValidator,
+  createGuestAccommodationValidator,
   accommodationIdValidator,
   accommodationQueryValidator,
   accommodationEventIdValidator,
@@ -21,6 +24,39 @@ import {
 } from "../validators/accommodation.validator.js";
 
 const router = Router();
+
+/**
+ * ============================================================
+ * Public / Guest Routes
+ * ============================================================
+ */
+
+router.post(
+  "/public/book",
+  createGuestAccommodationValidator,
+  validate,
+  accommodationController.createGuestAccommodation,
+);
+
+router.get(
+  "/public/:id",
+  verifyAccommodationGuestToken,
+  accommodationController.getGuestAccommodation,
+);
+
+router.post(
+  "/public/:id/screenshot",
+  verifyAccommodationGuestToken,
+  accommodationController.uploadGuestPaymentScreenshot,
+);
+
+router.delete(
+  "/public/:id",
+  verifyAccommodationGuestToken,
+  cancelAccommodationValidator,
+  validate,
+  accommodationController.cancelGuestAccommodation,
+);
 
 /**
  * ============================================================

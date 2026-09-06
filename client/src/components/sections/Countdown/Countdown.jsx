@@ -36,8 +36,8 @@ const highlights = [
 
   {
     icon: MapPin,
-    title: "JNTUA College of Engineering",
-    subtitle: "Pulivendula",
+    title: "JNTUA College of Engineering Pulivendula (Autonomous)",
+    subtitle: "",
   },
 
   {
@@ -104,8 +104,7 @@ export default function Countdown() {
             learning and celebration at
             <span className="font-semibold text-primary">
               {" "}
-              JNTUA College of Engineering,
-              Pulivendula
+              JNTUA College of Engineering Pulivendula (Autonomous)
             </span>
             .
           </p>

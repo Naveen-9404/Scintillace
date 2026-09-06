@@ -173,13 +173,13 @@ const findByVerificationCode = (
  * ============================================================
  */
 
-const findByRegistrationAndUser = (
+const findByRegistrationAndTeamMemberId = (
   registrationId,
-  userId,
+  teamMemberId,
 ) => {
   return Certificate.findOne({
     registration: registrationId,
-    user: userId,
+    teamMemberId: teamMemberId || null,
   })
     .populate(certificatePopulate)
     .lean()
@@ -192,13 +192,13 @@ const findByRegistrationAndUser = (
  * ============================================================
  */
 
-const findByRegistrationAndUserRaw = (
+const findByRegistrationAndTeamMemberIdRaw = (
   registrationId,
-  userId,
+  teamMemberId,
 ) => {
   return Certificate.findOne({
     registration: registrationId,
-    user: userId,
+    teamMemberId: teamMemberId || null,
   })
     .lean()
     .exec();
@@ -568,11 +568,13 @@ const certificateExists = (
  * ============================================================
  */
 
-const registrationCertificateExists = (
+const registrationMemberCertificateExists = (
   registrationId,
+  teamMemberId,
 ) => {
   return Certificate.exists({
     registration: registrationId,
+    teamMemberId: teamMemberId || null,
   }).then(Boolean);
 };
 
@@ -623,8 +625,8 @@ const certificateRepository =
 
     findByVerificationCode,
 
-    findByRegistrationAndUser,
-    findByRegistrationAndUserRaw,
+    findByRegistrationAndTeamMemberId,
+    findByRegistrationAndTeamMemberIdRaw,
 
     findAll,
     count,
@@ -651,7 +653,7 @@ const certificateRepository =
     findCertificatesWithVerificationCodeByRegistrationIds,
 
     certificateExists,
-    registrationCertificateExists,
+    registrationMemberCertificateExists,
 
     certificateNumberExists,
     verificationCodeExists,

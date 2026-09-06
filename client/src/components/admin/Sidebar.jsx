@@ -168,8 +168,7 @@ export default function Sidebar({
             <p className="text-xs leading-5 text-slate-600">
               Scintillace 2026
               <br />
-              JNTUA College of Engineering,
-              Pulivendula
+              JNTUA College of Engineering Pulivendula (Autonomous)
             </p>
 
           </div>

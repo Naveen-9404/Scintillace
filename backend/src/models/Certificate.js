@@ -41,7 +41,23 @@ const certificateSchema = new Schema(
     user: {
       type: Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      required: false,
+      index: true,
+    },
+
+    /**
+     * ========================================================
+     * Team Member
+     * ========================================================
+     *
+     * Points to the specific member inside Team.members if this
+     * is a team certificate. Null for individual certificates.
+     */
+
+    teamMemberId: {
+      type: Schema.Types.ObjectId,
+      required: false,
+      default: null,
       index: true,
     },
 
@@ -382,11 +398,9 @@ certificateSchema.index({
 certificateSchema.index(
   {
     registration: 1,
-    user: 1,
+    teamMemberId: 1,
   },
-  {
-    unique: true,
-  }
+  { unique: true }
 );
 
 certificateSchema.index({

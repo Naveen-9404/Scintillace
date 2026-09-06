@@ -43,7 +43,7 @@ const registrationSchema = new Schema(
     user: {
       type: Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      required: false,
       index: true,
     },
 
@@ -74,6 +74,37 @@ const registrationSchema = new Schema(
       minlength: 2,
       maxlength: 100,
       index: true,
+      default: "",
+    },
+
+    participantEmail: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      default: "",
+    },
+
+    participantPhone: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    collegeId: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    department: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    yearOfStudy: {
+      type: String,
+      trim: true,
       default: "",
     },
 
@@ -193,6 +224,23 @@ const registrationSchema = new Schema(
      */
 
     cancellationDate: {
+      type: Date,
+      default: null,
+    },
+
+    /**
+     * ========================================================
+     * Guest Payment Token
+     * ========================================================
+     */
+
+    guestTokenHash: {
+      type: String,
+      default: null,
+      select: false, // Ensure we don't accidentally leak the hash to frontend
+    },
+
+    guestTokenExpiresAt: {
       type: Date,
       default: null,
     },
@@ -327,10 +375,7 @@ registrationSchema.index(
   {
     user: 1,
     event: 1,
-  },
-  {
-    unique: true,
-  },
+  }
 );
 
 /**

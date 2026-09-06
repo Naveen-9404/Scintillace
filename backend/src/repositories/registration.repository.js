@@ -507,6 +507,28 @@ const findActiveByUserAndEvent = (
 
 /**
  * ============================================================
+ * Find Active Registration By Email And Event (Public Registration)
+ * ============================================================
+ */
+
+const findActiveByEmailAndEvent = (
+  email,
+  eventId,
+) => {
+  const normalizedEmail = email.trim().toLowerCase();
+  return Registration.findOne({
+    participantEmail: { $regex: new RegExp(`^${normalizedEmail}$`, "i") },
+    event: eventId,
+    status: {
+      $ne: REGISTRATION_STATUS.CANCELLED,
+    },
+  })
+    .populate(registrationPopulate)
+    .exec();
+};
+
+/**
+ * ============================================================
  * Find Active Registration By Team And Event
  * ============================================================
  */
@@ -630,6 +652,7 @@ const registrationRepository =
     findRawByTeamAndEvent,
 
     findActiveByUserAndEvent,
+    findActiveByEmailAndEvent,
     findActiveByTeamAndEvent,
 
     findCheckedInByFestival,

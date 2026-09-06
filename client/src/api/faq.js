@@ -21,7 +21,7 @@ export const faqs = [
     category: "General",
     question: "What is Scintillace 2K26?",
     answer:
-      "Scintillace 2K26 is a technical symposium organized by JNTUA College of Engineering (Autonomous), Pulivendula.",
+      "Scintillace 2K26 is a technical symposium organized by JNTUA College of Engineering Pulivendula (Autonomous).",
   },
 
   {
@@ -29,7 +29,7 @@ export const faqs = [
     category: "General",
     question: "When and where will Scintillace 2K26 be conducted?",
     answer:
-      "Scintillace 2K26 will be conducted on September 29 and 30, 2026, at JNTUA College of Engineering (Autonomous), Pulivendula.",
+      "Scintillace 2K26 will be conducted on September 29 and 30, 2026, at JNTUA College of Engineering Pulivendula (Autonomous).",
   },
 
   {

@@ -114,12 +114,43 @@ const getAllPayments = asyncHandler(
   },
 );
 
+/**
+ * ============================================================
+ * Submit Payment Screenshot (Guest)
+ * POST /api/v1/payments/public/:id/screenshot
+ * ============================================================
+ */
+
+const submitPaymentScreenshot = asyncHandler(async (req, res) => {
+  const { screenshotUrl, screenshotPublicId, paymentFor, accommodationId } = req.body;
+  const { registration } = req; // From verifyGuestToken middleware
+
+  if (!screenshotUrl || !screenshotPublicId) {
+    throw new ApiError("Screenshot URL and Public ID are required.", HTTP_STATUS.BAD_REQUEST);
+  }
+
+  const payment = await paymentService.submitPaymentScreenshot({
+    registration,
+    screenshotUrl,
+    screenshotPublicId,
+    paymentFor,
+    accommodationId,
+  });
+
+  return res.status(HTTP_STATUS.OK).json({
+    success: true,
+    message: "Payment screenshot submitted successfully.",
+    data: payment,
+  });
+});
+
 const paymentController =
   Object.freeze({
     getPaymentById,
     downloadPaymentReceipt,
     getMyPayments,
     getAllPayments,
+    submitPaymentScreenshot,
   });
 
 export default paymentController;

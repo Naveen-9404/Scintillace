@@ -5,10 +5,12 @@ import certificateController from "../controllers/certificate.controller.js";
 import authenticate from "../middlewares/authenticate.js";
 import authorize from "../middlewares/authorize.js";
 import validateRequest from "../middlewares/validateRequest.js";
+import verifyGuestToken from "../middlewares/verifyGuestToken.js";
 
 import {
   createCertificateValidator,
   certificateIdValidator,
+  downloadCertificateValidator,
   certificateNumberValidator,
   verificationCodeValidator,
   eventCertificateValidator,
@@ -40,6 +42,20 @@ router.get(
   certificateNumberValidator,
   validateRequest,
   certificateController.getCertificateByNumber,
+);
+
+router.get(
+  "/public/:registrationId",
+  verifyGuestToken,
+  certificateController.getPublicCertificates,
+);
+
+router.get(
+  "/public/:registrationId/download/:certificateId",
+  verifyGuestToken,
+  downloadCertificateValidator,
+  validateRequest,
+  certificateController.downloadPublicCertificate,
 );
 
 /**

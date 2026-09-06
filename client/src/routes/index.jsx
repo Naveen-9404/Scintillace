@@ -21,15 +21,13 @@ const PresentationDetails = lazy(() => import("../pages/PresentationDetails/Pres
 const HardwareExpo = lazy(() => import("../pages/HardwareExpo/HardwareExpo"));
 const Workshop = lazy(() => import("../pages/Workshop/Workshop"));
 const Announcements = lazy(() => import("../pages/Announcements"));
-const Profile = lazy(() => import("../pages/Profile"));
-const MyTickets = lazy(() => import("../pages/Tickets/MyTickets"));
+const Gallery = lazy(() => import("../pages/Gallery"));
 
 const Login = lazy(() => import("../pages/Login"));
-const Register = lazy(() => import("../pages/Register"));
 
-const Dashboard = lazy(() => import("../pages/Dashboard"));
-const Certificates = lazy(() => import("../pages/Certificates"));
+
 const TicketScanner = lazy(() => import("../pages/TicketScanner/TicketScanner"));
+const Certificates = lazy(() => import("../pages/Certificates/Certificates"));
 
 /**
  * ============================================================
@@ -44,10 +42,6 @@ const Admin = lazy(() => import("../pages/admin"));
  * Route Guards
  * ============================================================
  */
-
-import {
-  ProtectedRoute,
-} from "./ProtectedRoute";
 
 import RoleProtectedRoute from "./RoleProtectedRoute";
 
@@ -131,6 +125,17 @@ export function AppRoutes() {
           path="/accommodation"
           element={
             <Accommodation />
+          }
+        />
+
+        {/* ===================================================
+            Gallery
+            =================================================== */}
+
+        <Route
+          path="/gallery"
+          element={
+            <Gallery />
           }
         />
 
@@ -220,27 +225,6 @@ export function AppRoutes() {
           }
         />
 
-        <Route
-          path="/register"
-          element={
-            <PublicRoute>
-              <Register />
-            </PublicRoute>
-          }
-        />
-
-      </Route>
-
-      {/* =====================================================
-          PROTECTED USER ROUTES
-          ===================================================== */}
-
-      <Route
-        element={
-          <ProtectedRoute />
-        }
-      >
-
         {/* ===================================================
             Event Registration
             =================================================== */}
@@ -249,39 +233,6 @@ export function AppRoutes() {
           path="/events/:eventId/register"
           element={
             <EventRegistration />
-          }
-        />
-
-        {/* ===================================================
-            Dashboard
-            =================================================== */}
-
-        <Route
-          path="/dashboard/*"
-          element={
-            <Dashboard />
-          }
-        />
-
-        {/* ===================================================
-            Profile
-            =================================================== */}
-
-        <Route
-          path="/profile"
-          element={
-            <Profile />
-          }
-        />
-
-        {/* ===================================================
-            My Tickets
-            =================================================== */}
-
-        <Route
-          path="/tickets"
-          element={
-            <MyTickets />
           }
         />
 

@@ -8,7 +8,6 @@ const {
   errors,
   json,
   printf,
-  simple,
   timestamp,
 } = winston.format;
 

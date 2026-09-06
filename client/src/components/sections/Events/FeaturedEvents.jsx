@@ -18,7 +18,7 @@ import { Link } from "react-router-dom";
  *
  * Final public event order:
  *
- * 1. Embedded & IoT with AI Workshop
+ * 1. Embedded & IoT with Artificial Intelligence
  * 2. Paper Presentation
  * 3. Poster Presentation
  * 4. Hardware Expo
@@ -32,7 +32,7 @@ import { Link } from "react-router-dom";
 
 const featuredEvents = [
   {
-    title: "Embedded & IoT with AI Workshop",
+    title: "Embedded & IoT with Artificial Intelligence",
     subtitle: "Featured Workshop",
     description:
       "A hands-on learning experience combining Embedded Systems, IoT and Artificial Intelligence for students interested in emerging technologies.",

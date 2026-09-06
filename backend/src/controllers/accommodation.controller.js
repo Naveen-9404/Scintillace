@@ -40,6 +40,39 @@ const createAccommodation = asyncHandler(
 
 /**
  * ============================================================
+ * Create Accommodation Booking (Guest)
+ * POST /api/v1/accommodation/public/book
+ * ============================================================
+ */
+
+const createGuestAccommodation = asyncHandler(
+  async (req, res) => {
+    // Generate secure guest token
+    const crypto = await import("crypto");
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    const guestTokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+
+    // Pass guestTokenHash to service instead of registrationId
+    const bookingData = {
+      ...req.body,
+      guestTokenHash
+    };
+
+    const booking = await accommodationService.createGuestAccommodation(bookingData);
+
+    res.status(HTTP_STATUS.CREATED).json({
+      success: true,
+      message: "Guest accommodation booked successfully.",
+      data: {
+        booking,
+        accommodationGuestToken: rawToken
+      },
+    });
+  }
+);
+
+/**
+ * ============================================================
  * Get All Accommodation Bookings
  * GET /api/v1/accommodation
  * ============================================================
@@ -122,6 +155,52 @@ const getMyAccommodation =
       data: bookings,
     });
   });
+
+/**
+ * ============================================================
+ * Get Guest Accommodation
+ * GET /api/v1/accommodation/public/my
+ * ============================================================
+ */
+
+const getGuestAccommodation = asyncHandler(
+  async (req, res) => {
+    // The accommodation is already populated by verifyAccommodationGuestToken middleware
+    const booking = req.accommodation;
+
+    res.status(HTTP_STATUS.OK).json({
+      success: true,
+      data: booking,
+    });
+  }
+);
+
+/**
+ * ============================================================
+ * Upload Guest Payment Screenshot
+ * POST /api/v1/accommodation/public/:id/screenshot
+ * ============================================================
+ */
+
+const uploadGuestPaymentScreenshot = asyncHandler(
+  async (req, res) => {
+    // The accommodation is already verified by verifyAccommodationGuestToken middleware
+    const bookingId = req.accommodation._id;
+    const { screenshotUrl, screenshotPublicId } = req.body;
+
+    const booking = await accommodationService.uploadGuestPaymentScreenshot(
+      bookingId,
+      screenshotUrl,
+      screenshotPublicId
+    );
+
+    res.status(HTTP_STATUS.OK).json({
+      success: true,
+      message: "Payment screenshot uploaded successfully.",
+      data: booking,
+    });
+  }
+);
 
 /**
  * ============================================================
@@ -249,6 +328,30 @@ const cancelAccommodation =
 
 /**
  * ============================================================
+ * Cancel Accommodation (Guest)
+ * DELETE /api/v1/accommodation/public/:id
+ * ============================================================
+ */
+
+const cancelGuestAccommodation = asyncHandler(
+  async (req, res) => {
+    const booking = await accommodationService.cancelAccommodation(
+      req.params.id,
+      null, // No user ID for guests
+      req.body.reason || "",
+      { isGuest: true }
+    );
+
+    res.status(HTTP_STATUS.OK).json({
+      success: true,
+      message: "Guest accommodation booking cancelled successfully.",
+      data: booking,
+    });
+  }
+);
+
+/**
+ * ============================================================
  * Process Refund
  * PATCH /api/v1/accommodation/:id/refund
  * ============================================================
@@ -365,12 +468,15 @@ const getAccommodationAvailability =
 const accommodationController =
   Object.freeze({
     createAccommodation,
+    createGuestAccommodation,
 
     getAllAccommodation,
 
     getAccommodationById,
 
     getMyAccommodation,
+    getGuestAccommodation,
+    uploadGuestPaymentScreenshot,
 
     confirmAccommodation,
 
@@ -381,6 +487,7 @@ const accommodationController =
     rejectAccommodation,
 
     cancelAccommodation,
+    cancelGuestAccommodation,
 
     refundAccommodation,
 

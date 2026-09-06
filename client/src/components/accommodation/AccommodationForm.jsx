@@ -1,43 +1,26 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { BedDouble, ShieldCheck } from "lucide-react";
 import { FaCalendarAlt, FaRupeeSign, FaSpinner } from "react-icons/fa";
 
-import { createAccommodation } from "../../api/accommodation.api";
-import { getMyRegistrations } from "../../api/registrations.api";
+import { createGuestAccommodation } from "../../api/accommodation.api";
 import PaymentProofUpload from "../events/PaymentProofUpload";
 
 const AccommodationForm = ({ selectedRoom, onBookingSuccess }) => {
-  const [registrations, setRegistrations] = useState([]);
-  const [loadingReg, setLoadingReg] = useState(true);
+  const [participantName, setParticipantName] = useState("");
+  const [participantEmail, setParticipantEmail] = useState("");
+  const [participantPhone, setParticipantPhone] = useState("");
+  const [collegeId, setCollegeId] = useState("");
+  const [department, setDepartment] = useState("");
+  const [yearOfStudy, setYearOfStudy] = useState("");
+
   const [error, setError] = useState("");
   const [processing, setProcessing] = useState(false);
 
-  const [registrationId, setRegistrationId] = useState("");
   const [checkInDate, setCheckInDate] = useState("");
   const [checkOutDate, setCheckOutDate] = useState("");
   const [paymentScreenshot, setPaymentScreenshot] = useState(null);
 
-  useEffect(() => {
-    const fetchRegistrations = async () => {
-      try {
-        setLoadingReg(true);
-        const data = await getMyRegistrations();
-        const activeRegistrations = data.filter(
-          (reg) => reg.status === "REGISTERED"
-        );
-        setRegistrations(activeRegistrations);
-        if (activeRegistrations.length === 1) {
-          setRegistrationId(activeRegistrations[0]._id);
-        }
-      } catch (err) {
-        console.error("Failed to load registrations:", err);
-      } finally {
-        setLoadingReg(false);
-      }
-    };
-    fetchRegistrations();
-  }, []);
 
   const getAmount = () => {
     if (!checkInDate || !checkOutDate) return 0;
@@ -70,8 +53,8 @@ const AccommodationForm = ({ selectedRoom, onBookingSuccess }) => {
       setError("Please select a room type above.");
       return;
     }
-    if (!registrationId) {
-      setError("Please select a registration.");
+    if (!participantName || !participantEmail || !participantPhone || !collegeId || !department || !yearOfStudy) {
+      setError("Please fill in all participant details.");
       return;
     }
     if (!checkInDate || !checkOutDate) {
@@ -90,7 +73,12 @@ const AccommodationForm = ({ selectedRoom, onBookingSuccess }) => {
     try {
       setProcessing(true);
       const payload = {
-        registrationId,
+        participantName,
+        participantEmail,
+        participantPhone,
+        collegeId,
+        department,
+        yearOfStudy,
         hostelType: selectedRoom,
         checkInDate,
         checkOutDate,
@@ -98,9 +86,15 @@ const AccommodationForm = ({ selectedRoom, onBookingSuccess }) => {
         screenshotPublicId: paymentScreenshot.publicId,
       };
 
-      const booking = await createAccommodation(payload);
+      const booking = await createGuestAccommodation(payload);
+      
+      // Store the token in sessionStorage so the user can view status later if needed
+      if (booking?.booking?._id && booking?.accommodationGuestToken) {
+        sessionStorage.setItem(`accommodationToken_${booking.booking._id}`, booking.accommodationGuestToken);
+      }
+      
       if (onBookingSuccess) {
-        onBookingSuccess(booking);
+        onBookingSuccess(booking?.booking || booking);
       }
     } catch (err) {
       setError(
@@ -147,30 +141,78 @@ const AccommodationForm = ({ selectedRoom, onBookingSuccess }) => {
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
               
-              {/* Registration Select */}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Select Registration</label>
-                {loadingReg ? (
-                  <div className="p-3 bg-white/5 rounded-xl border border-white/10 animate-pulse h-12"></div>
-                ) : registrations.length === 0 ? (
-                  <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-sm">
-                    You do not have any active event registrations. You must be registered for an event to book accommodation.
-                  </div>
-                ) : (
-                  <select
-                    className="w-full rounded-xl border border-white/10 bg-white/5 p-3 text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
-                    value={registrationId}
-                    onChange={(e) => setRegistrationId(e.target.value)}
+              {/* Participant Details */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Full Name *</label>
+                  <input
+                    type="text"
+                    value={participantName}
+                    onChange={(e) => setParticipantName(e.target.value)}
                     required
+                    className="block w-full rounded-xl border border-white/10 bg-white/5 p-3 text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                    placeholder="Enter your full name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Email Address *</label>
+                  <input
+                    type="email"
+                    value={participantEmail}
+                    onChange={(e) => setParticipantEmail(e.target.value)}
+                    required
+                    className="block w-full rounded-xl border border-white/10 bg-white/5 p-3 text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                    placeholder="Enter your email address"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Phone Number *</label>
+                  <input
+                    type="tel"
+                    value={participantPhone}
+                    onChange={(e) => setParticipantPhone(e.target.value)}
+                    required
+                    className="block w-full rounded-xl border border-white/10 bg-white/5 p-3 text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                    placeholder="Enter your phone number"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">College/Institution *</label>
+                  <input
+                    type="text"
+                    value={collegeId}
+                    onChange={(e) => setCollegeId(e.target.value)}
+                    required
+                    className="block w-full rounded-xl border border-white/10 bg-white/5 p-3 text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                    placeholder="Enter your college/institution"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Department / Branch *</label>
+                  <input
+                    type="text"
+                    value={department}
+                    onChange={(e) => setDepartment(e.target.value)}
+                    required
+                    className="block w-full rounded-xl border border-white/10 bg-white/5 p-3 text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                    placeholder="e.g., Computer Science"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Year of Study *</label>
+                  <select
+                    value={yearOfStudy}
+                    onChange={(e) => setYearOfStudy(e.target.value)}
+                    required
+                    className="block w-full rounded-xl border border-white/10 bg-white/5 p-3 text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                   >
-                    <option value="" disabled className="bg-zinc-900">-- Select a Registration --</option>
-                    {registrations.map(reg => (
-                      <option key={reg._id} value={reg._id} className="bg-zinc-900">
-                        {reg.event?.title || "Unknown Event"} ({reg.registrationId})
-                      </option>
-                    ))}
+                    <option value="" disabled className="bg-zinc-900">Select Year</option>
+                    <option value="1" className="bg-zinc-900">1st Year</option>
+                    <option value="2" className="bg-zinc-900">2nd Year</option>
+                    <option value="3" className="bg-zinc-900">3rd Year</option>
+                    <option value="4" className="bg-zinc-900">4th Year</option>
                   </select>
-                )}
+                </div>
               </div>
 
               {/* Dates */}
@@ -260,7 +302,7 @@ const AccommodationForm = ({ selectedRoom, onBookingSuccess }) => {
               {/* Submit */}
               <button
                 type="submit"
-                disabled={processing || registrations.length === 0 || amount <= 0 || !paymentScreenshot}
+                disabled={processing || amount <= 0 || !paymentScreenshot || !participantName || !participantEmail || !participantPhone || !collegeId || !department || !yearOfStudy}
                 className="w-full mt-6 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-6 py-4 text-lg font-bold text-white transition hover:from-cyan-600 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2 shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:shadow-[0_0_30px_rgba(6,182,212,0.5)]"
               >
                 {processing ? (

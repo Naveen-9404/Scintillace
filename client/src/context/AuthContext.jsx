@@ -3,6 +3,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  useRef,
 } from "react";
 
 import authApi from "../api/auth";
@@ -59,6 +60,14 @@ export function AuthProvider({
     useCallback(
       async () => {
         try {
+          const hasSession = localStorage.getItem("scintillace_auth_session") === "true";
+          
+          if (!hasSession) {
+            clearAccessToken();
+            setLoading(false);
+            return;
+          }
+
           let token =
             getAccessToken();
 
@@ -169,13 +178,15 @@ export function AuthProvider({
             currentUser,
           );
         } catch (error) {
-          console.warn(
-            "Unable to restore authentication session.",
-            error,
-          );
+          const status = error?.response?.status;
+          if (status !== 401) {
+            console.warn(
+              "Unable to restore authentication session.",
+              error,
+            );
+          }
 
           clearAccessToken();
-
           setUser(null);
         } finally {
           setLoading(false);
@@ -190,8 +201,11 @@ export function AuthProvider({
    * ============================================================
    */
 
+  const hasAttemptedRestore = useRef(false);
+
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (hasAttemptedRestore.current) return;
+    hasAttemptedRestore.current = true;
     restoreSession();
   }, [restoreSession]);
 

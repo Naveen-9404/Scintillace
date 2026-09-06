@@ -48,7 +48,7 @@ const ACCOMMODATION_PAYMENT_STATUS =
  * Accommodation Pricing
  * ============================================================
  *
- * ₹100 per accommodation day per participant.
+ * ₹200 per accommodation day per participant.
  */
 
 const ACCOMMODATION_PRICE_PER_DAY = 200;

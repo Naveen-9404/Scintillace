@@ -11,8 +11,41 @@ import paymentValidator from "../validators/payment.validator.js";
 import ROLES from "../constants/roles.js";
 
 import { paymentOrderLimiter, paymentVerifyLimiter } from "../middlewares/rateLimiters.js";
+import verifyGuestToken from "../middlewares/verifyGuestToken.js";
+import rateLimit from "express-rate-limit";
 
 const router = Router();
+
+
+/**
+ * ============================================================
+ * PUBLIC / GUEST PAYMENT ROUTES
+ * ============================================================
+ */
+
+const publicPaymentLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: "Too many payment screenshot uploads, please try again later.",
+  },
+  skip: () => process.env.NODE_ENV === "test"
+});
+
+/**
+ * Submit Payment Screenshot
+ *
+ * POST /api/v1/payments/public/:id/screenshot
+ */
+router.post(
+  "/public/:id/screenshot",
+  publicPaymentLimiter,
+  verifyGuestToken,
+  paymentController.submitPaymentScreenshot,
+);
 
 
 /**

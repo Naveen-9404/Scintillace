@@ -194,8 +194,7 @@ export default function Footer() {
             </p>
 
             <p className="mt-4 text-sm leading-6 text-slate-500">
-              JNTUA College of Engineering,
-              Pulivendula
+              JNTUA College of Engineering Pulivendula (Autonomous)
             </p>
 
             <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">
@@ -321,8 +320,7 @@ export default function Footer() {
                 />
 
                 <span className="text-sm leading-6 text-slate-400">
-                  JNTUA College of Engineering,
-                  Pulivendula
+                  JNTUA College of Engineering Pulivendula (Autonomous)
                 </span>
 
               </div>
@@ -403,7 +401,7 @@ export default function Footer() {
             </p>
 
             <p className="mt-1 text-xs text-slate-600">
-              JNTUA College of Engineering, Pulivendula
+              JNTUA College of Engineering Pulivendula (Autonomous)
             </p>
 
           </div>

@@ -44,8 +44,45 @@ const accommodationSchema = new Schema(
     user: {
       type: Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      required: false,
       index: true,
+    },
+
+    participantName: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    participantEmail: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      default: "",
+    },
+
+    participantPhone: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    collegeId: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    department: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    yearOfStudy: {
+      type: String,
+      trim: true,
+      default: "",
     },
 
     /**
@@ -59,8 +96,33 @@ const accommodationSchema = new Schema(
     registration: {
       type: Schema.Types.ObjectId,
       ref: "Registration",
-      required: true,
-      unique: true,
+      required: false,
+      index: true,
+    },
+
+    /**
+     * ========================================================
+     * Team Member ID
+     * ========================================================
+     *
+     * Enables multiple team members to book separate beds
+     * under the same event registration.
+     */
+
+    teamMemberId: {
+      type: Schema.Types.Mixed,
+      default: null,
+    },
+
+    /**
+     * ========================================================
+     * Guest Token Hash (Standalone Public Bookings)
+     * ========================================================
+     */
+
+    guestTokenHash: {
+      type: String,
+      default: "",
     },
 
     /**
@@ -72,7 +134,7 @@ const accommodationSchema = new Schema(
     event: {
       type: Schema.Types.ObjectId,
       ref: "Event",
-      required: true,
+      required: false,
       index: true,
     },
 
@@ -551,6 +613,23 @@ accommodationSchema.index({
 accommodationSchema.index({
   confirmationCode: 1,
 });
+
+/**
+ * Event-linked Team Member Uniqueness (Partial Index)
+ * 
+ * Enforces uniqueness on (registration, teamMemberId) ONLY when
+ * a registration is provided. Standalone public bookings (registration=null)
+ * are excluded from this unique constraint.
+ */
+accommodationSchema.index(
+  { registration: 1, teamMemberId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      registration: { $type: "objectId" }
+    }
+  }
+);
 
 /**
  * ============================================================

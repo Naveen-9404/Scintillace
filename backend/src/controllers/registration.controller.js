@@ -51,6 +51,55 @@ const createRegistration = asyncHandler(
 
 /**
  * ============================================================
+ * Create Public Registration (Guest)
+ * POST /api/v1/registrations/public
+ * ============================================================
+ */
+
+const createPublicRegistration = asyncHandler(async (req, res) => {
+  const result = await registrationService.createPublicRegistration(req.body);
+
+  return res.status(HTTP_STATUS.CREATED).json({
+    success: true,
+    message: result.paymentRequired
+      ? "Registration submitted. Your payment is pending verification."
+      : "Registration created successfully.",
+    data: result,
+  });
+});
+
+/**
+ * ============================================================
+ * Get Public Registration Status (Guest)
+ * GET /api/v1/registrations/public/:id/status
+ * ============================================================
+ */
+
+const getPublicRegistrationStatus = asyncHandler(async (req, res) => {
+  // req.registration is attached by verifyGuestToken middleware
+  const { registration } = req;
+
+  return res.status(HTTP_STATUS.OK).json({
+    success: true,
+    message: "Registration status fetched successfully.",
+    data: {
+      registrationId: registration._id,
+      participantName: registration.participantName,
+      status: registration.status,
+      paymentStatus: registration.paymentStatus,
+      event: registration.event ? {
+        name: registration.event.name,
+        type: registration.event.type,
+        registrationFee: registration.event.registrationFee,
+        currency: registration.event.currency
+      } : null,
+      team: registration.team
+    }
+  });
+});
+
+/**
+ * ============================================================
  * Get All Registrations
  * GET /api/v1/registrations
  * ============================================================
@@ -496,9 +545,28 @@ const rejectRegistration = asyncHandler(async (req, res) => {
  * ============================================================
  */
 
+/**
+ * ============================================================
+ * Retry Ticket Generation
+ * POST /api/v1/registrations/:id/retry-tickets
+ * ============================================================
+ */
+const retryTicketGeneration = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const result = await registrationService.retryTicketGeneration(id);
+
+  return res.status(HTTP_STATUS.OK).json({
+    success: true,
+    message: "Ticket generation retried successfully.",
+    data: result,
+  });
+});
+
 const registrationController =
   Object.freeze({
     createRegistration,
+    createPublicRegistration,
 
     getAllRegistrations,
 
@@ -518,13 +586,21 @@ const registrationController =
 
     updatePaymentStatus,
 
+    getPaymentByRegistration,
+
+    approveRegistration,
+
+    rejectRegistration,
+
     checkInRegistration,
 
     deleteRegistration,
-    
-    getPaymentByRegistration,
-    approveRegistration,
-    rejectRegistration,
+
+    createPublicRegistration,
+
+    getPublicRegistrationStatus,
+
+    retryTicketGeneration,
   });
 
 export default registrationController;

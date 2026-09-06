@@ -25,6 +25,81 @@ export const getCertificates =
 
 /**
  * ============================================================
+ * Get Public Certificates (Guest)
+ * ============================================================
+ *
+ * GET /api/v1/certificates/public/:registrationId
+ */
+
+export const getPublicCertificates =
+  async (
+    registrationId,
+    guestToken,
+  ) => {
+    if (!registrationId) {
+      throw new Error(
+        "Registration ID is required.",
+      );
+    }
+    
+    if (!guestToken) {
+      throw new Error(
+        "Guest token is required.",
+      );
+    }
+
+    const { data } =
+      await apiClient.get(
+        `/v1/certificates/public/${registrationId}`,
+        {
+          headers: {
+            "X-Guest-Token": guestToken,
+          }
+        }
+      );
+
+    return (
+      data?.data?.certificates ||
+      []
+    );
+  };
+
+/**
+ * ============================================================
+ * Download Public Certificate (Guest)
+ * ============================================================
+ *
+ * GET /api/v1/certificates/public/:registrationId/download/:certificateId
+ */
+
+export const downloadPublicCertificate =
+  async (
+    registrationId,
+    certificateId,
+    guestToken,
+  ) => {
+    if (!registrationId || !certificateId || !guestToken) {
+      throw new Error(
+        "Registration ID, Certificate ID, and Guest token are required.",
+      );
+    }
+
+    const response =
+      await apiClient.get(
+        `/v1/certificates/public/${registrationId}/download/${certificateId}`,
+        {
+          headers: {
+            "X-Guest-Token": guestToken,
+          },
+          responseType: 'blob' // Important for downloading PDF
+        }
+      );
+
+    return response.data;
+  };
+
+/**
+ * ============================================================
  * Verify Certificate
  * ============================================================
  *
@@ -150,4 +225,6 @@ export default {
   verifyCertificate,
   getFestivalCertificates,
   disburseFestivalCertificates,
+  getPublicCertificates,
+  downloadPublicCertificate,
 };

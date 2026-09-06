@@ -20,7 +20,7 @@ const stats = [
   {
     icon: MapPin,
     title: "Venue",
-    value: "JNTUA College of Engineering, Pulivendula",
+    value: "JNTUA College of Engineering Pulivendula (Autonomous)",
   },
   {
     icon: Sparkles,
@@ -121,7 +121,7 @@ export default function CTA() {
             <p className="mx-auto mt-6 max-w-3xl text-lg leading-8 text-slate-300">
               Be part of Scintillace — a celebration of
               technology, creativity, learning and culture
-              at JNTUA College of Engineering, Pulivendula.
+              at JNTUA College of Engineering Pulivendula (Autonomous).
             </p>
 
           </div>

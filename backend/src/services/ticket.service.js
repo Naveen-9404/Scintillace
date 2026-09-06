@@ -165,6 +165,7 @@ const createTicket = async (
     user,
     event,
     festival,
+    teamMemberId,
   } = ticketData;
 
   validateObjectId(
@@ -172,10 +173,19 @@ const createTicket = async (
     "Registration ID",
   );
 
-  validateObjectId(
-    user,
-    "User ID",
-  );
+  if (user) {
+    validateObjectId(
+      user,
+      "User ID",
+    );
+  }
+
+  if (teamMemberId) {
+    validateObjectId(
+      teamMemberId,
+      "Team Member ID",
+    );
+  }
 
   validateObjectId(
     event,
@@ -192,16 +202,16 @@ const createTicket = async (
    * same registration.
    */
 
-  const existing =
-    await ticketRepository.registrationTicketExists(
-      registration,
-      session,
-    );
+  const query = {
+    registration,
+    teamMemberId: teamMemberId || null,
+  };
+  const existing = await ticketRepository.ticketExistsByQuery(query, session);
 
   if (existing) {
     throw new ApiError(
       HTTP_STATUS.CONFLICT,
-      "A ticket has already been generated for this registration.",
+      "A ticket has already been generated for this registration member.",
     );
   }
 
@@ -234,6 +244,68 @@ const createTicket = async (
       ? { session }
       : {},
   );
+};
+
+/**
+ * ============================================================
+ * Create Tickets For Registration
+ * ============================================================
+ */
+
+const createTicketsForRegistration = async (registrationId, generatedBy = null, session = null) => {
+  const Registration = mongoose.model("Registration");
+  const registration = await Registration.findById(registrationId).populate("team").lean().exec();
+
+  if (!registration) {
+    throw new ApiError(HTTP_STATUS.NOT_FOUND, "Registration not found.");
+  }
+
+  const getReferenceId = (ref) => ref?._id || ref;
+
+  const baseTicketData = {
+    registration: registration._id,
+    user: getReferenceId(registration.user) || null,
+    event: getReferenceId(registration.event),
+    festival: getReferenceId(registration.festival),
+  };
+
+  const tickets = [];
+
+  const processTicket = async (teamMemberId) => {
+    try {
+      const ticket = await createTicket({
+        ...baseTicketData,
+        teamMemberId,
+      }, generatedBy, session);
+      return ticket;
+    } catch (error) {
+      if ((error.statusCode === HTTP_STATUS.CONFLICT) || (error.code === 11000)) {
+        const existingTicket = await mongoose.model("Ticket").findOne({
+          registration: baseTicketData.registration,
+          teamMemberId: teamMemberId || null,
+        }).session(session || null);
+        
+        if (existingTicket) {
+          // Flag it so consumers know it's not a brand new ticket (e.g. to avoid duplicate emails)
+          existingTicket._isRecovered = true;
+          return existingTicket;
+        }
+      }
+      throw error;
+    }
+  };
+
+  if (registration.team && registration.team.members && registration.team.members.length > 0) {
+    for (const member of registration.team.members) {
+      const ticket = await processTicket(member._id);
+      tickets.push(ticket);
+    }
+  } else {
+    const ticket = await processTicket(null);
+    tickets.push(ticket);
+  }
+
+  return tickets;
 };
 
 /**
@@ -907,6 +979,7 @@ const deleteTicket = async (
 const ticketService =
   Object.freeze({
     createTicket,
+    createTicketsForRegistration,
 
     getTicketById,
     getTicketByNumber,

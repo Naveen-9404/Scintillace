@@ -1,13 +1,16 @@
 import express from "express";
+import rateLimit from "express-rate-limit";
 
 import registrationController from "../controllers/registration.controller.js";
 
 import authenticate from "../middlewares/authenticate.js";
 import authorize from "../middlewares/authorize.js";
 import validateRequest from "../middlewares/validateRequest.js";
+import verifyGuestToken from "../middlewares/verifyGuestToken.js";
 
 import {
   createRegistrationValidator,
+  publicRegistrationValidator,
   registrationIdValidator,
   eventIdValidator,
   festivalIdValidator,
@@ -56,6 +59,61 @@ router.post(
   ...createRegistrationValidator,
   validateRequest,
   registrationController.createRegistration,
+);
+
+/**
+ * ============================================================
+ * Public Routes
+ * ============================================================
+ */
+
+const publicRegistrationLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: "Too many registrations from this IP, please try again after 15 minutes.",
+  },
+  skip: () => process.env.NODE_ENV === "test"
+});
+
+/**
+ * Public Register for an Event
+ *
+ * POST /api/v1/registrations/public
+ */
+router.post(
+  "/public",
+  publicRegistrationLimiter,
+  ...publicRegistrationValidator,
+  validateRequest,
+  registrationController.createPublicRegistration,
+);
+
+const publicStatusLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: "Too many status checks from this IP, please try again later.",
+  },
+  skip: () => process.env.NODE_ENV === "test"
+});
+
+/**
+ * Get Public Registration Status
+ *
+ * GET /api/v1/registrations/public/:id/status
+ */
+router.get(
+  "/public/:id/status",
+  publicStatusLimiter,
+  verifyGuestToken,
+  registrationController.getPublicRegistrationStatus,
 );
 
 /**
@@ -241,6 +299,30 @@ router.patch(
 /**
  * PATCH /api/v1/registrations/:id/payment-status
  */
+
+/**
+ * ============================================================
+ * Ticket Recovery
+ * ============================================================
+ */
+
+/**
+ * POST /api/v1/registrations/:id/retry-tickets
+ * 
+ * Safely retry ticket and email generation for a registration
+ * that is already in PAID status but failed to generate tickets.
+ */
+router.post(
+  "/:id/retry-tickets",
+  authenticate,
+  authorize(
+    ROLES.SUPER_ADMIN,
+    ROLES.FACULTY,
+  ),
+  ...registrationIdValidator,
+  validateRequest,
+  registrationController.retryTicketGeneration,
+);
 router.patch(
   "/:id/payment-status",
   authenticate,

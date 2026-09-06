@@ -180,6 +180,24 @@ const findByRegistration = (
 
 /**
  * ============================================================
+ * Find Accommodation By Registration and Team Member
+ * ============================================================
+ */
+
+const findByRegistrationAndTeamMember = (
+  registrationId,
+  teamMemberId = null,
+) => {
+  return Accommodation.findOne({
+    registration: registrationId,
+    teamMemberId: teamMemberId,
+  })
+    .populate(accommodationPopulate)
+    .exec();
+};
+
+/**
+ * ============================================================
  * Find Accommodation By Event
  * ============================================================
  */
@@ -495,6 +513,8 @@ const accommodationRepository =
     findByUser,
 
     findByRegistration,
+
+    findByRegistrationAndTeamMember,
 
     findByEvent,
 

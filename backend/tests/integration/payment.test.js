@@ -1,11 +1,33 @@
-import mongoose from "mongoose";
-import request from "supertest";
-import app from "../../src/app.js";
-import User from "../../src/models/User.js";
-import Event from "../../src/models/Event.js";
-import Festival from "../../src/models/Festival.js";
-import Payment from "../../src/models/Payment.js";
-import Ticket from "../../src/models/Ticket.js";
+import { jest } from '@jest/globals';
+
+jest.unstable_mockModule("../../src/utils/email.js", () => ({
+  default: {
+    sendRegistrationConfirmation: jest.fn().mockResolvedValue(true),
+    sendAccommodationConfirmation: jest.fn().mockResolvedValue(true),
+    sendCertificateEmail: jest.fn().mockResolvedValue(true),
+  }
+}));
+
+jest.unstable_mockModule("../../src/utils/cloudinary.js", () => ({
+  default: {
+    deleteAsset: jest.fn().mockResolvedValue(true),
+  }
+}));
+
+jest.unstable_mockModule("../../src/services/certificatePdf.service.js", () => ({
+  default: {
+    generateCertificatePdf: jest.fn().mockResolvedValue(Buffer.from("dummy-pdf-content")),
+  }
+}));
+
+const { default: mongoose } = await import("mongoose");
+const { default: request } = await import("supertest");
+const { default: app } = await import("../../src/app.js");
+const { default: User } = await import("../../src/models/User.js");
+const { default: Event } = await import("../../src/models/Event.js");
+const { default: Festival } = await import("../../src/models/Festival.js");
+const { default: Payment } = await import("../../src/models/Payment.js");
+const { default: Ticket } = await import("../../src/models/Ticket.js");
 
 
 describe("Payment Integration Tests (Manual UPI Architecture)", () => {

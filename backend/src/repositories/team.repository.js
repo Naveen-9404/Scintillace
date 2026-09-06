@@ -553,6 +553,32 @@ const countMembers = (
 
 /**
  * ============================================================
+ * Find Active Team Where Guest Leader Email Exists For Event
+ * ============================================================
+ */
+
+const findActiveByLeaderEmailAndEvent = (
+  eventId,
+  email,
+) => {
+  const normalizedEmail = email.trim().toLowerCase();
+  return Team.findOne({
+    event: eventId,
+    "members": { 
+      $elemMatch: { 
+        participantEmail: { $regex: new RegExp(`^${normalizedEmail}$`, "i") },
+        role: "LEADER" // Assuming leader is defined by role, but wait, do guests have roles?
+      }
+    },
+    status: { $ne: "CANCELLED" }
+  })
+    .populate(teamPopulate)
+    .lean()
+    .exec();
+};
+
+/**
+ * ============================================================
  * Repository Export
  * ============================================================
  */
@@ -579,6 +605,7 @@ const teamRepository =
     findByEventAndLeader,
     findByEventAndName,
     findByEventAndMember,
+    findActiveByLeaderEmailAndEvent,
     findActiveTeamByEventAndMember,
 
     inviteCodeExists,

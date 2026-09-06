@@ -39,6 +39,75 @@ export const createAccommodation = async (
 
 /**
  * ============================================================
+ * Create Guest Accommodation Booking
+ * ============================================================
+ *
+ * POST /api/v1/accommodation/public/book
+ */
+
+export const createGuestAccommodation = async (
+  payload
+) => {
+  const { data } = await apiClient.post(
+    "/v1/accommodation/public/book",
+    payload
+  );
+
+  return data?.data || null;
+};
+
+/**
+ * ============================================================
+ * Get Guest Accommodation Bookings
+ * ============================================================
+ *
+ * GET /api/v1/accommodation/public/book/:registrationId
+ */
+
+export const getGuestAccommodation = async (
+  id,
+  accommodationToken
+) => {
+  const { data } = await apiClient.get(
+    `/v1/accommodation/public/${id}`,
+    {
+      headers: {
+        "X-Accommodation-Token": accommodationToken
+      }
+    }
+  );
+
+  return data?.data || null;
+};
+
+/**
+ * ============================================================
+ * Upload Guest Accommodation Payment Screenshot
+ * ============================================================
+ *
+ * POST /api/v1/accommodation/public/:id/screenshot
+ */
+
+export const uploadGuestAccommodationPaymentScreenshot = async (
+  id,
+  payload,
+  accommodationToken
+) => {
+  const { data } = await apiClient.post(
+    `/v1/accommodation/public/${id}/screenshot`,
+    payload,
+    {
+      headers: {
+        "X-Accommodation-Token": accommodationToken
+      }
+    }
+  );
+
+  return data?.data || null;
+};
+
+/**
+ * ============================================================
  * Get My Accommodation Bookings
  * ============================================================
  *
@@ -166,6 +235,40 @@ export const cancelAccommodationBooking =
       await apiClient.patch(
         `/v1/accommodation/${id}/cancel`,
         payload,
+      );
+
+    return data?.data || null;
+  };
+
+/**
+ * ============================================================
+ * Cancel Guest Accommodation Booking
+ * ============================================================
+ *
+ * DELETE /api/v1/accommodation/public/:id
+ */
+
+export const cancelGuestAccommodationBooking =
+  async (
+    id,
+    accommodationToken,
+    payload = {},
+  ) => {
+    if (!id) {
+      throw new Error(
+        "Accommodation ID is required.",
+      );
+    }
+
+    const { data } =
+      await apiClient.delete(
+        `/v1/accommodation/public/${id}`,
+        {
+          headers: {
+            "X-Accommodation-Token": accommodationToken
+          },
+          data: payload
+        }
       );
 
     return data?.data || null;

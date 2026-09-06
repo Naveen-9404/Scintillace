@@ -47,6 +47,11 @@ export default function GalleryCard({
         <img
           src={image}
           alt={title}
+          loading="lazy"
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = "/images/gallery/fallback.jpg";
+          }}
           className="
             h-full
             w-full
