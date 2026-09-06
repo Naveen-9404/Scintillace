@@ -41,6 +41,8 @@ const corsConfig = Object.freeze({
   allowedHeaders: [
     "Content-Type",
     "Authorization",
+    "X-Guest-Token",
+    "X-Accommodation-Token",
   ],
 });
 
