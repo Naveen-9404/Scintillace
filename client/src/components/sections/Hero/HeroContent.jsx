@@ -158,7 +158,7 @@ export default function HeroContent() {
         {/* Register Button */}
 
         <Link
-          to="/register"
+          to="/events"
           className="
             group
             relative

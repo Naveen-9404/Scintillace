@@ -81,7 +81,7 @@ const orbitIcons = [
 
 export default function HeroIllustration() {
   return (
-    <div className="relative hidden h-[620px] w-[560px] lg:block">
+    <div className="relative hidden h-[620px] w-[560px] lg:block pointer-events-none">
 
       {/* Glow */}
       <motion.div
