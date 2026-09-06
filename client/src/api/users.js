@@ -15,7 +15,7 @@ export const updateProfile =
   async (payload) => {
     const response =
       await apiClient.patch(
-        "/v1/auth/me",
+        "/auth/me",
         payload,
       );
 

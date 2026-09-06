@@ -19,7 +19,7 @@ export const createTeam = async ({
   teamName,
 }) => {
   const { data } = await apiClient.post(
-    "/v1/teams",
+    "/teams",
     {
       eventId,
       teamName,
@@ -43,7 +43,7 @@ export const createTeamBulk = async ({
   participants,
 }) => {
   const { data } = await apiClient.post(
-    "/v1/teams/bulk",
+    "/teams/bulk",
     {
       eventId,
       teamName,
@@ -72,7 +72,7 @@ export const joinTeam = async (
 ) => {
   const { data } =
     await apiClient.post(
-      "/v1/teams/join",
+      "/teams/join",
       {
         inviteCode,
       },
@@ -94,7 +94,7 @@ export const getMyTeams = async (
 ) => {
   const { data } =
     await apiClient.get(
-      "/v1/teams/my-teams",
+      "/teams/my-teams",
       {
         params,
       },
@@ -116,7 +116,7 @@ export const getTeam = async (
 ) => {
   const { data } =
     await apiClient.get(
-      `/v1/teams/${teamId}`,
+      `/teams/${teamId}`,
     );
 
   return data?.data?.team;
@@ -135,7 +135,7 @@ export const leaveTeam = async (
 ) => {
   const { data } =
     await apiClient.patch(
-      `/v1/teams/${teamId}/leave`,
+      `/teams/${teamId}/leave`,
     );
 
   return data?.data;

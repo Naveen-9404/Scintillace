@@ -8,21 +8,18 @@ const getOrigin = (value) => {
   }
 };
 
-const clientOrigin =
-  getOrigin(env.clientUrl);
+const clientOrigins = env.clientUrl
+  ? env.clientUrl.split(",").map(url => getOrigin(url.trim())).filter(Boolean)
+  : [];
 
-const isTrustedClientOrigin = (
-  origin,
-) =>
-  Boolean(clientOrigin) &&
-  getOrigin(origin) === clientOrigin;
+const isTrustedClientOrigin = (origin) => {
+  const originStr = getOrigin(origin);
+  return Boolean(originStr) && clientOrigins.includes(originStr);
+};
 
 const corsConfig = Object.freeze({
   origin(origin, callback) {
-    if (
-      origin &&
-      isTrustedClientOrigin(origin)
-    ) {
+    if (origin && isTrustedClientOrigin(origin)) {
       callback(null, true);
       return;
     }

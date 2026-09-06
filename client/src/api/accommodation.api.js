@@ -30,7 +30,7 @@ export const createAccommodation = async (
 ) => {
   const { data } =
     await apiClient.post(
-      "/v1/accommodation",
+      "/accommodation",
       payload,
     );
 
@@ -49,7 +49,7 @@ export const createGuestAccommodation = async (
   payload
 ) => {
   const { data } = await apiClient.post(
-    "/v1/accommodation/public/book",
+    "/accommodation/public/book",
     payload
   );
 
@@ -69,7 +69,7 @@ export const getGuestAccommodation = async (
   accommodationToken
 ) => {
   const { data } = await apiClient.get(
-    `/v1/accommodation/public/${id}`,
+    `/accommodation/public/${id}`,
     {
       headers: {
         "X-Accommodation-Token": accommodationToken
@@ -94,7 +94,7 @@ export const uploadGuestAccommodationPaymentScreenshot = async (
   accommodationToken
 ) => {
   const { data } = await apiClient.post(
-    `/v1/accommodation/public/${id}/screenshot`,
+    `/accommodation/public/${id}/screenshot`,
     payload,
     {
       headers: {
@@ -118,7 +118,7 @@ export const getMyAccommodationBookings =
   async () => {
     const { data } =
       await apiClient.get(
-        "/v1/accommodation/my",
+        "/accommodation/my",
       );
 
     /**
@@ -160,7 +160,7 @@ export const getAccommodationBooking =
 
     const { data } =
       await apiClient.get(
-        `/v1/accommodation/${id}`,
+        `/accommodation/${id}`,
       );
 
     /**
@@ -196,7 +196,7 @@ export const getAccommodationAvailability =
 
     const { data } =
       await apiClient.get(
-        `/v1/accommodation/availability/${eventId}`,
+        `/accommodation/availability/${eventId}`,
         {
           params,
         },
@@ -233,7 +233,7 @@ export const cancelAccommodationBooking =
 
     const { data } =
       await apiClient.patch(
-        `/v1/accommodation/${id}/cancel`,
+        `/accommodation/${id}/cancel`,
         payload,
       );
 
@@ -262,7 +262,7 @@ export const cancelGuestAccommodationBooking =
 
     const { data } =
       await apiClient.delete(
-        `/v1/accommodation/public/${id}`,
+        `/accommodation/public/${id}`,
         {
           headers: {
             "X-Accommodation-Token": accommodationToken
@@ -288,7 +288,7 @@ export const getAccommodationStats =
   async () => {
     const { data } =
       await apiClient.get(
-        "/v1/accommodation/stats",
+        "/accommodation/stats",
       );
 
     return data?.data || null;
@@ -314,7 +314,7 @@ export const confirmAccommodation =
 
     const { data } =
       await apiClient.patch(
-        `/v1/accommodation/${id}/confirm`,
+        `/accommodation/${id}/confirm`,
       );
 
     return data?.data || null;
@@ -343,7 +343,7 @@ export const markAccommodationPaymentPaid =
 
     const { data } =
       await apiClient.patch(
-        `/v1/accommodation/${id}/payment/paid`,
+        `/accommodation/${id}/payment/paid`,
         payload,
       );
 
@@ -370,7 +370,7 @@ export const markAccommodationPaymentFailed =
 
     const { data } =
       await apiClient.patch(
-        `/v1/accommodation/${id}/payment/failed`,
+        `/accommodation/${id}/payment/failed`,
       );
 
     return data?.data || null;
@@ -399,7 +399,7 @@ export const rejectAccommodation =
 
     const { data } =
       await apiClient.patch(
-        `/v1/accommodation/${id}/reject`,
+        `/accommodation/${id}/reject`,
         payload,
       );
 
@@ -429,7 +429,7 @@ export const refundAccommodation =
 
     const { data } =
       await apiClient.patch(
-        `/v1/accommodation/${id}/refund`,
+        `/accommodation/${id}/refund`,
         payload,
       );
 
@@ -456,7 +456,7 @@ export const deleteAccommodation =
 
     const { data } =
       await apiClient.delete(
-        `/v1/accommodation/${id}/delete`,
+        `/accommodation/${id}/delete`,
       );
 
     return data?.data || null;

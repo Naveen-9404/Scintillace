@@ -8,7 +8,7 @@ export const getPublishedAnnouncements = async (
 ) => {
   const { data } =
     await apiClient.get(
-      "/v1/announcements/published",
+      "/announcements/published",
       {
         params,
       },
@@ -30,7 +30,7 @@ export const searchAnnouncements =
   ) => {
     const { data } =
       await apiClient.get(
-        "/v1/announcements/search",
+        "/announcements/search",
         {
           params: {
             q: query,
@@ -55,7 +55,7 @@ export const getEventAnnouncements =
   ) => {
     const { data } =
       await apiClient.get(
-        `/v1/announcements/event/${eventId}`,
+        `/announcements/event/${eventId}`,
         {
           params,
         },
@@ -77,7 +77,7 @@ export const getFestivalAnnouncements =
   ) => {
     const { data } =
       await apiClient.get(
-        `/v1/announcements/festival/${festivalId}`,
+        `/announcements/festival/${festivalId}`,
         {
           params,
         },
@@ -102,7 +102,7 @@ export const getAllAnnouncements =
   async (params = {}) => {
     const { data } =
       await apiClient.get(
-        "/v1/announcements",
+        "/announcements",
         {
           params,
         },
@@ -121,7 +121,7 @@ export const getAnnouncementById =
   async (id) => {
     const { data } =
       await apiClient.get(
-        `/v1/announcements/${id}`,
+        `/announcements/${id}`,
       );
 
     return data?.data?.announcement;
@@ -134,7 +134,7 @@ export const createAnnouncement =
   async (payload) => {
     const { data } =
       await apiClient.post(
-        "/v1/announcements",
+        "/announcements",
         payload,
       );
 
@@ -151,7 +151,7 @@ export const updateAnnouncement =
   ) => {
     const { data } =
       await apiClient.put(
-        `/v1/announcements/${id}`,
+        `/announcements/${id}`,
         payload,
       );
 
@@ -165,7 +165,7 @@ export const publishAnnouncement =
   async (id) => {
     const { data } =
       await apiClient.patch(
-        `/v1/announcements/${id}/publish`,
+        `/announcements/${id}/publish`,
       );
 
     return data?.data?.announcement;
@@ -178,7 +178,7 @@ export const archiveAnnouncement =
   async (id) => {
     const { data } =
       await apiClient.patch(
-        `/v1/announcements/${id}/archive`,
+        `/announcements/${id}/archive`,
       );
 
     return data?.data?.announcement;
@@ -191,7 +191,7 @@ export const deleteAnnouncement =
   async (id) => {
     const { data } =
       await apiClient.delete(
-        `/v1/announcements/${id}`,
+        `/announcements/${id}`,
       );
 
     return data;

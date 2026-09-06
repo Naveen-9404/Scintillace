@@ -78,7 +78,7 @@ const downloadExport = async (
 export const exportUsers =
   () =>
     downloadExport(
-      "/v1/export/users",
+      "/export/users",
     );
 
 /**
@@ -87,7 +87,7 @@ export const exportUsers =
 export const exportFestivals =
   () =>
     downloadExport(
-      "/v1/export/festivals",
+      "/export/festivals",
     );
 
 /**
@@ -96,7 +96,7 @@ export const exportFestivals =
 export const exportEvents =
   () =>
     downloadExport(
-      "/v1/export/events",
+      "/export/events",
     );
 
 /**
@@ -105,7 +105,7 @@ export const exportEvents =
 export const exportRegistrations =
   () =>
     downloadExport(
-      "/v1/export/registrations",
+      "/export/registrations",
     );
 
 /**
@@ -114,7 +114,7 @@ export const exportRegistrations =
 export const exportPayments =
   () =>
     downloadExport(
-      "/v1/export/payments",
+      "/export/payments",
     );
 
 /**
@@ -123,7 +123,7 @@ export const exportPayments =
 export const exportAccommodation =
   () =>
     downloadExport(
-      "/v1/export/accommodation",
+      "/export/accommodation",
     );
 
 /**
@@ -132,7 +132,7 @@ export const exportAccommodation =
 export const exportTickets =
   () =>
     downloadExport(
-      "/v1/export/tickets",
+      "/export/tickets",
     );
 
 /**
@@ -141,7 +141,7 @@ export const exportTickets =
 export const exportCertificates =
   () =>
     downloadExport(
-      "/v1/export/certificates",
+      "/export/certificates",
     );
 
 /**
@@ -150,7 +150,7 @@ export const exportCertificates =
 export const exportCompleteReport =
   () =>
     downloadExport(
-      "/v1/export/all",
+      "/export/all",
     );
 
 const exportApi =

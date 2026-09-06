@@ -27,7 +27,7 @@ export const getFestivals =
   } = {}) => {
     const { data } =
       await apiClient.get(
-        "/v1/festivals",
+        "/festivals",
         {
           params: {
             page,

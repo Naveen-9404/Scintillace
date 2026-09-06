@@ -12,7 +12,7 @@ export const getMyPayments =
   async (params = {}) => {
     const { data } =
       await apiClient.get(
-        "/v1/payments/my-payments",
+        "/payments/my-payments",
         {
           params,
         },
@@ -42,7 +42,7 @@ export const getPayment =
 
     const { data } =
       await apiClient.get(
-        `/v1/payments/${paymentId}`,
+        `/payments/${paymentId}`,
       );
 
     return (
@@ -71,7 +71,7 @@ export const downloadReceipt =
     }
 
     return apiClient.get(
-      `/v1/payments/${paymentId}/receipt`,
+      `/payments/${paymentId}/receipt`,
       {
         responseType: "blob",
       },
@@ -93,7 +93,7 @@ export const submitGuestPaymentScreenshot =
     }
 
     const { data } = await apiClient.post(
-      `/v1/payments/public/${registrationId}/screenshot`,
+      `/payments/public/${registrationId}/screenshot`,
       payload,
       {
         headers: {

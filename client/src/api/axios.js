@@ -123,13 +123,13 @@ apiClient.interceptors.response.use(
 
     const isAuthRequest =
       requestUrl.includes(
-        "/v1/auth/login",
+        "/auth/login",
       ) ||
       requestUrl.includes(
-        "/v1/auth/register",
+        "/auth/register",
       ) ||
       requestUrl.includes(
-        "/v1/auth/refresh",
+        "/auth/refresh",
       );
 
     /**
@@ -208,7 +208,7 @@ apiClient.interceptors.response.use(
 
       const response =
         await axios.post(
-          `${baseURL}/v1/auth/refresh`,
+          `${baseURL}/auth/refresh`,
           {},
           {
             withCredentials: true,

@@ -18,7 +18,7 @@ export const registerForEvent =
   async (payload) => {
     const { data } =
       await apiClient.post(
-        "/v1/registrations",
+        "/registrations",
         payload,
       );
     return data.data;
@@ -33,7 +33,7 @@ export const publicRegisterForEvent =
     // (If token exists, it might be sent by apiClient but is ignored by the public endpoint)
     const { data } =
       await apiClient.post(
-        "/v1/registrations/public",
+        "/registrations/public",
         payload,
       );
 
@@ -47,7 +47,7 @@ export const getGuestRegistrationStatus =
   async (id, guestToken) => {
     const { data } =
       await apiClient.get(
-        `/v1/registrations/public/${id}/status`,
+        `/registrations/public/${id}/status`,
         {
           headers: {
             "X-Guest-Token": guestToken
@@ -64,7 +64,7 @@ export const getMyRegistrations =
   async () => {
     const { data } =
       await apiClient.get(
-        "/v1/registrations/my",
+        "/registrations/my",
       );
 
     return (
@@ -80,7 +80,7 @@ export const getRegistration =
   async (id) => {
     const { data } =
       await apiClient.get(
-        `/v1/registrations/${id}`,
+        `/registrations/${id}`,
       );
 
     return data.data.registration;
@@ -93,7 +93,7 @@ export const cancelRegistration =
   async (id) => {
     const { data } =
       await apiClient.post(
-        `/v1/registrations/${id}/cancel`,
+        `/registrations/${id}/cancel`,
       );
 
     return data.data.registration;

@@ -9,7 +9,7 @@ import { apiClient } from "./axios";
 const register = async (payload) => {
   const response =
     await apiClient.post(
-      "/v1/auth/register",
+      "/auth/register",
       payload,
       {
         withCredentials: true,
@@ -37,7 +37,7 @@ const register = async (payload) => {
 const login = async (payload) => {
   const response =
     await apiClient.post(
-      "/v1/auth/login",
+      "/auth/login",
       payload,
       {
         withCredentials: true,
@@ -70,7 +70,7 @@ const refreshAccessToken =
   async () => {
     const response =
       await apiClient.post(
-        "/v1/auth/refresh",
+        "/auth/refresh",
         {},
         {
           withCredentials: true,
@@ -99,7 +99,7 @@ const getCurrentUser =
   async () => {
     const response =
       await apiClient.get(
-        "/v1/auth/me",
+        "/auth/me",
         {
           withCredentials: true,
         },
@@ -121,7 +121,7 @@ const logout =
   async () => {
     const response =
       await apiClient.post(
-        "/v1/auth/logout",
+        "/auth/logout",
         {},
         {
           withCredentials: true,

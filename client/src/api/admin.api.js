@@ -4,7 +4,7 @@ export const getAdminDashboard =
   async () => {
     const { data } =
       await apiClient.get(
-        "/v1/admin/dashboard",
+        "/admin/dashboard",
       );
 
     return (
@@ -16,7 +16,7 @@ export const getAdminOverview =
   async () => {
     const { data } =
       await apiClient.get(
-        "/v1/admin/overview",
+        "/admin/overview",
       );
 
     return (

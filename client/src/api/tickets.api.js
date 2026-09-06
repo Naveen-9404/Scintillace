@@ -13,7 +13,7 @@ import { apiClient } from "./axios";
 
 export const getMyTickets = async () => {
   const { data } = await apiClient.get(
-    "/v1/tickets/me",
+    "/tickets/me",
   );
 
   return (
@@ -39,7 +39,7 @@ export const getPublicTickets = async (registrationId, guestToken) => {
   }
 
   const { data } = await apiClient.get(
-    `/v1/tickets/public/${registrationId}`,
+    `/tickets/public/${registrationId}`,
     {
       headers: {
         "X-Guest-Token": guestToken,
@@ -78,7 +78,7 @@ export const getTicketQR =
 
     const { data } =
       await apiClient.get(
-        `/v1/tickets/${ticketId}/qr`,
+        `/tickets/${ticketId}/qr`,
       );
 
     return (
@@ -134,7 +134,7 @@ export const verifyTicketQR =
 
     const { data } =
       await apiClient.post(
-        "/v1/tickets/verify",
+        "/tickets/verify",
         {
           qrPayload:
             qrPayload.trim(),
@@ -173,7 +173,7 @@ export const checkInTicket =
 
     const { data } =
       await apiClient.patch(
-        `/v1/tickets/${ticketId}/check-in`,
+        `/tickets/${ticketId}/check-in`,
       );
 
     return (

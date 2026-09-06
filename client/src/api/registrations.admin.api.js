@@ -13,7 +13,7 @@ export const getAllRegistrations =
   async (params = {}) => {
     const response =
       await apiClient.get(
-        "/v1/registrations",
+        "/registrations",
         {
           params,
         },
@@ -32,7 +32,7 @@ export const getRegistrationById =
   async (id) => {
     const response =
       await apiClient.get(
-        `/v1/registrations/${id}`,
+        `/registrations/${id}`,
       );
 
     return response.data.data
@@ -52,7 +52,7 @@ export const getRegistrationsByEvent =
   ) => {
     const response =
       await apiClient.get(
-        `/v1/registrations/event/${eventId}`,
+        `/registrations/event/${eventId}`,
         {
           params,
         },
@@ -74,7 +74,7 @@ export const getRegistrationsByFestival =
   ) => {
     const response =
       await apiClient.get(
-        `/v1/registrations/festival/${festivalId}`,
+        `/registrations/festival/${festivalId}`,
         {
           params,
         },
@@ -96,7 +96,7 @@ export const getRegistrationsByTeam =
   ) => {
     const response =
       await apiClient.get(
-        `/v1/registrations/team/${teamId}`,
+        `/registrations/team/${teamId}`,
         {
           params,
         },
@@ -118,7 +118,7 @@ export const updateRegistrationStatus =
   ) => {
     const response =
       await apiClient.patch(
-        `/v1/registrations/${id}/status`,
+        `/registrations/${id}/status`,
         {
           status,
         },
@@ -141,7 +141,7 @@ export const updatePaymentStatus =
   ) => {
     const response =
       await apiClient.patch(
-        `/v1/registrations/${id}/payment-status`,
+        `/registrations/${id}/payment-status`,
         {
           paymentStatus,
         },
@@ -161,7 +161,7 @@ export const checkInRegistration =
   async (id) => {
     const response =
       await apiClient.patch(
-        `/v1/registrations/${id}/check-in`,
+        `/registrations/${id}/check-in`,
       );
 
     return response.data.data
@@ -175,17 +175,17 @@ export const checkInRegistration =
  */
 
 export const getPaymentByRegistration = async (id) => {
-  const response = await apiClient.get(`/v1/registrations/${id}/payment`);
+  const response = await apiClient.get(`/registrations/${id}/payment`);
   return response.data.data.payment;
 };
 
 export const approveRegistration = async (id) => {
-  const response = await apiClient.post(`/v1/registrations/${id}/approve`);
+  const response = await apiClient.post(`/registrations/${id}/approve`);
   return response.data.data.registration;
 };
 
 export const rejectRegistration = async (id, rejectionReason) => {
-  const response = await apiClient.post(`/v1/registrations/${id}/reject`, {
+  const response = await apiClient.post(`/registrations/${id}/reject`, {
     rejectionReason,
   });
   return response.data.data.registration;
@@ -202,7 +202,7 @@ export const deleteRegistration =
   async (id) => {
     const response =
       await apiClient.delete(
-        `/v1/registrations/${id}/permanent`,
+        `/registrations/${id}/permanent`,
       );
 
     return response.data;

@@ -10,7 +10,7 @@ import { apiClient } from "./axios";
 
 const getEvents = async (params = {}) => {
   const response = await apiClient.get(
-    "/v1/events",
+    "/events",
     {
       params,
     },
@@ -41,7 +41,7 @@ const getEvents = async (params = {}) => {
 
 const getEventById = async (eventId) => {
   const response = await apiClient.get(
-    `/v1/events/${eventId}`,
+    `/events/${eventId}`,
   );
 
   const body = response.data;
@@ -66,7 +66,7 @@ const getPublishedEvents = async (
   params = {},
 ) => {
   const response = await apiClient.get(
-    "/v1/events/published",
+    "/events/published",
     {
       params,
     },
@@ -86,7 +86,7 @@ const getPublishedEvents = async (
 const getOpenRegistrationEvents =
   async (params = {}) => {
     const response = await apiClient.get(
-      "/v1/events/open-registration",
+      "/events/open-registration",
       {
         params,
       },
@@ -107,7 +107,7 @@ const getUpcomingEvents = async (
   params = {},
 ) => {
   const response = await apiClient.get(
-    "/v1/events/upcoming",
+    "/events/upcoming",
     {
       params,
     },
@@ -128,7 +128,7 @@ const searchEvents = async (
   params = {},
 ) => {
   const response = await apiClient.get(
-    "/v1/events/search",
+    "/events/search",
     {
       params,
     },
@@ -149,7 +149,7 @@ const getEventAvailability = async (
   eventId,
 ) => {
   const response = await apiClient.get(
-    `/v1/events/${eventId}/availability`,
+    `/events/${eventId}/availability`,
   );
 
   return response.data;

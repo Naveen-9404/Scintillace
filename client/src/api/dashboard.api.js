@@ -8,7 +8,7 @@ import { apiClient } from "./axios";
  */
 export const getMyRegistrations = async () => {
   const { data } = await apiClient.get(
-    "/v1/registrations/my"
+    "/registrations/my"
   );
 
   return data.data.registrations;
@@ -22,7 +22,7 @@ export const getMyRegistrations = async () => {
  */
 export const getMyCertificates = async () => {
   const { data } = await apiClient.get(
-    "/v1/certificates/me"
+    "/certificates/me"
   );
 
   return data.data.certificates;
@@ -35,7 +35,7 @@ export const getMyCertificates = async () => {
  */
 export const getUpcomingEvents = async () => {
   const { data } = await apiClient.get(
-    "/v1/events/upcoming"
+    "/events/upcoming"
   );
 
   return data.data.events;

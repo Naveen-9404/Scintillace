@@ -18,7 +18,7 @@ export const getMyVolunteerAssignments =
   async () => {
     const { data } =
       await apiClient.get(
-        "/v1/volunteers/me",
+        "/volunteers/me",
       );
 
     return (

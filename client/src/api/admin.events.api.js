@@ -2,7 +2,7 @@ import { apiClient } from "./axios";
 
 export const createEvent = async (payload) => {
   const { data } = await apiClient.post(
-    "/v1/events",
+    "/events",
     payload
   );
 
@@ -11,7 +11,7 @@ export const createEvent = async (payload) => {
 
 export const updateEvent = async (id, payload) => {
   const { data } = await apiClient.put(
-    `/v1/events/${id}`,
+    `/events/${id}`,
     payload
   );
 
@@ -19,5 +19,5 @@ export const updateEvent = async (id, payload) => {
 };
 
 export const deleteEvent = async (id) => {
-  return apiClient.delete(`/v1/events/${id}`);
+  return apiClient.delete(`/events/${id}`);
 };

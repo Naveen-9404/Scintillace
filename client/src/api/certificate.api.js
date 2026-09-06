@@ -14,7 +14,7 @@ export const getCertificates =
   async () => {
     const { data } =
       await apiClient.get(
-        "/v1/certificates/me",
+        "/certificates/me",
       );
 
     return (
@@ -50,7 +50,7 @@ export const getPublicCertificates =
 
     const { data } =
       await apiClient.get(
-        `/v1/certificates/public/${registrationId}`,
+        `/certificates/public/${registrationId}`,
         {
           headers: {
             "X-Guest-Token": guestToken,
@@ -86,7 +86,7 @@ export const downloadPublicCertificate =
 
     const response =
       await apiClient.get(
-        `/v1/certificates/public/${registrationId}/download/${certificateId}`,
+        `/certificates/public/${registrationId}/download/${certificateId}`,
         {
           headers: {
             "X-Guest-Token": guestToken,
@@ -120,7 +120,7 @@ export const verifyCertificate =
 
     const { data } =
       await apiClient.get(
-        `/v1/certificates/verify/${encodeURIComponent(
+        `/certificates/verify/${encodeURIComponent(
           verificationCode,
         )}`,
       );
@@ -156,7 +156,7 @@ export const getFestivalCertificates =
 
     const { data } =
       await apiClient.get(
-        `/v1/certificates/festival/${festivalId}`,
+        `/certificates/festival/${festivalId}`,
         {
           params,
         },
@@ -210,7 +210,7 @@ export const disburseFestivalCertificates =
 
     const { data } =
       await apiClient.post(
-        `/v1/certificates/festival/${festivalId}/disburse`,
+        `/certificates/festival/${festivalId}/disburse`,
       );
 
     return (
