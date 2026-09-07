@@ -114,7 +114,7 @@ export default function Footer() {
           BACKGROUND GLOW
           ===================================================== */}
 
-      <div className="absolute inset-0 overflow-hidden">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
 
         <motion.div
           animate={{
