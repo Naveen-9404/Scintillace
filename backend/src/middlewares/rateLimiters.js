@@ -17,7 +17,7 @@ const createRateLimitHandler = (message) => {
  */
 export const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 100,
+  limit: 5000,
   standardHeaders: "draft-7",
   legacyHeaders: false,
   skip: () => isTestEnv,

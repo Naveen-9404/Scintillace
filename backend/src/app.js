@@ -31,6 +31,8 @@ import mongoSanitize from "./middlewares/mongoSanitize.js";
 
 const app = express();
 
+app.set("trust proxy", 1);
+
 if (process.env.NODE_ENV === "test") {
   app.use((req, res, next) => {
     req.headers.origin = "http://localhost:5173";

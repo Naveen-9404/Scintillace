@@ -2,6 +2,7 @@ import ticketService from "../services/ticket.service.js";
 
 import asyncHandler from "../utils/asyncHandler.js";
 import ApiResponse from "../utils/ApiResponse.js";
+import ApiError from "../utils/ApiError.js";
 
 import HTTP_STATUS from "../constants/httpStatus.js";
 

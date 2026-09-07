@@ -600,10 +600,20 @@ const createRegistration =
      * ========================================================
      */
 
-    let registration =
-      await registrationRepository.create(
+    let registration;
+    try {
+      registration = await registrationRepository.create(
         registrationData,
       );
+    } catch (error) {
+      if (error.code === 11000) {
+        throw new ApiError(
+          "A conflicting registration was detected. This team or participant is already registered for this event.",
+          HTTP_STATUS.CONFLICT
+        );
+      }
+      throw error;
+    }
 
     /**
      * ========================================================
@@ -1572,6 +1582,9 @@ const createPublicRegistration = async (guestData) => {
     } catch (error) {
       await session.abortTransaction();
       session.endSession();
+      if (error.code === 11000) {
+        throw new ApiError("A conflicting registration was detected (duplicate name or email).", HTTP_STATUS.CONFLICT);
+      }
       throw error;
     }
 
@@ -1604,7 +1617,15 @@ const createPublicRegistration = async (guestData) => {
       guestTokenExpiresAt,
     };
 
-    const registration = await registrationRepository.create(registrationData);
+    let registration;
+    try {
+      registration = await registrationRepository.create(registrationData);
+    } catch (error) {
+      if (error.code === 11000) {
+        throw new ApiError("You are already registered for this event.", HTTP_STATUS.CONFLICT);
+      }
+      throw error;
+    }
 
     return {
       paymentRequired: event.isPaid,

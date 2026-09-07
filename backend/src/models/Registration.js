@@ -378,16 +378,41 @@ registrationSchema.index(
   }
 );
 
+registrationSchema.index(
+  {
+    event: 1,
+    participantEmail: 1,
+  },
+  {
+    unique: true,
+    name: "unique_active_participant_per_event",
+    partialFilterExpression: {
+      status: { $in: ["PENDING", "REGISTERED", "WAITLISTED", "REJECTED"] },
+      participantEmail: { $type: "string", $gt: "" },
+    },
+  }
+);
+
 /**
  * ============================================================
  * Team Registration Lookup
  * ============================================================
  */
 
-registrationSchema.index({
-  team: 1,
-  event: 1,
-});
+registrationSchema.index(
+  {
+    team: 1,
+    event: 1,
+  },
+  {
+    unique: true,
+    name: "unique_active_team_per_event",
+    partialFilterExpression: {
+      status: { $in: ["PENDING", "REGISTERED", "WAITLISTED", "REJECTED"] },
+      team: { $type: "objectId" },
+    },
+  }
+);
 
 /**
  * ============================================================

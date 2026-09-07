@@ -11,7 +11,9 @@ export const initializeDatabase = async () => {
     await mongoose.connect(env.mongoDbUri, {
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
-      maxPoolSize: 10,
+      maxPoolSize: 150,
+      minPoolSize: 10,
+      waitQueueTimeoutMS: 10000,
     });
 
     logger.info(
