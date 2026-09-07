@@ -1,12 +1,9 @@
-﻿import { motion } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Mail,
   Phone,
   MapPin,
   ChevronUp,
-  Instagram,
-  Linkedin,
-  Github,
   ArrowRight,
 } from "lucide-react";
 import {
@@ -21,8 +18,8 @@ import naveenProfile from "../../assets/naveen-profile.jpg";
 const quickLinks = [
   {
     label: "Home",
-    href: "/#hero",
-    type: "section",
+    href: "/",
+    type: "route",
   },
   {
     label: "About",
@@ -31,8 +28,8 @@ const quickLinks = [
   },
   {
     label: "Events",
-    href: "/#events",
-    type: "section",
+    href: "/events",
+    type: "route",
   },
   {
     label: "Schedule",
@@ -41,8 +38,8 @@ const quickLinks = [
   },
   {
     label: "Gallery",
-    href: "/#gallery",
-    type: "section",
+    href: "/gallery",
+    type: "route",
   },
   {
     label: "FAQ",
@@ -71,23 +68,6 @@ const eventLinks = [
   },
 ];
 
-const socialLinks = [
-  {
-    icon: Instagram,
-    label: "Instagram",
-    href: "#",
-  },
-  {
-    icon: Linkedin,
-    label: "LinkedIn",
-    href: "#",
-  },
-  {
-    icon: Github,
-    label: "GitHub",
-    href: "#",
-  },
-];
 
 export default function Footer() {
   const location = useLocation();
@@ -198,7 +178,7 @@ export default function Footer() {
             </p>
 
             <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">
-              Technology â€¢ Innovation â€¢ Culture
+              Technology • Innovation • Culture
             </div>
 
           </div>
@@ -353,36 +333,6 @@ export default function Footer() {
 
             </div>
 
-            {/* Social Links */}
-
-            <div className="mt-8">
-
-              <p className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                Follow Scintillace
-              </p>
-
-              <div className="flex gap-3">
-
-                {socialLinks.map(
-                  ({
-                    icon: Icon,
-                    label,
-                    href,
-                  }) => (
-                    <a
-                      key={label}
-                      href={href}
-                      aria-label={label}
-                      className="rounded-xl border border-white/10 bg-white/5 p-3 text-slate-300 transition-all duration-300 hover:-translate-y-1 hover:border-cyan-400/30 hover:bg-cyan-400/10 hover:text-cyan-300"
-                    >
-                      <Icon size={18} />
-                    </a>
-                  ),
-                )}
-
-              </div>
-
-            </div>
 
           </div>
 
@@ -397,7 +347,7 @@ export default function Footer() {
           <div className="text-center md:text-left">
 
             <p className="text-sm text-slate-500">
-              Â© 2026 Scintillace. All Rights Reserved.
+              © 2026 Scintillace. All Rights Reserved.
             </p>
 
             <p className="mt-1 text-xs text-slate-600">
