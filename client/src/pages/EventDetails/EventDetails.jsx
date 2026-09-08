@@ -359,8 +359,10 @@ export default function EventDetails() {
           mx-auto
           max-w-7xl
           px-4
-          py-8
+          pt-36
+          pb-8
           sm:px-6
+          md:pt-40
           lg:px-8
         "
       >

@@ -86,7 +86,7 @@ export default function PresentationDetails() {
           HERO
           ===================================================== */}
 
-      <section className="relative overflow-hidden py-24">
+      <section className="relative overflow-hidden pt-36 pb-24 md:pt-40">
 
         <div className="absolute inset-0">
 

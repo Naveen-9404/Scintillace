@@ -199,7 +199,7 @@ export default function MyTickets() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-background px-6 py-10 text-foreground">
+      <main className="min-h-screen bg-background px-6 pt-36 pb-10 text-foreground">
         <div className="mx-auto max-w-6xl">
           <div className="h-10 w-52 animate-pulse rounded-lg bg-zinc-800" />
 
@@ -228,7 +228,7 @@ export default function MyTickets() {
 
   if (error) {
     return (
-      <main className="min-h-screen bg-background px-6 py-10 text-foreground">
+      <main className="min-h-screen bg-background px-6 pt-36 pb-10 text-foreground">
         <div className="mx-auto max-w-6xl">
           <div className="rounded-3xl border border-red-500/20 bg-red-500/5 p-10 text-center">
             <h1 className="text-xl font-bold text-red-300">
@@ -256,7 +256,7 @@ export default function MyTickets() {
 
   return (
     <>
-      <main className="min-h-screen bg-background px-6 py-10 text-foreground md:py-14">
+      <main className="min-h-screen bg-background px-6 pt-36 pb-10 text-foreground md:pt-40 md:pb-14">
         <div className="mx-auto max-w-6xl">
 
           {/* ==================================================

@@ -22,7 +22,7 @@ export default function Workshop() {
           HERO
           ===================================================== */}
 
-      <section className="relative overflow-hidden py-24">
+      <section className="relative overflow-hidden pt-36 pb-24 md:pt-40">
 
         {/* Background */}
         <div className="absolute inset-0">

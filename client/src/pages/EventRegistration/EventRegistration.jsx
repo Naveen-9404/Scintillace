@@ -523,7 +523,7 @@ export default function EventRegistration() {
   const canRegister = registrationOpen && !deadlinePassed;
 
   return (
-    <section className="min-h-screen bg-zinc-950 px-4 py-10 text-white md:px-6 md:py-16">
+    <section className="min-h-screen bg-zinc-950 px-4 pt-36 pb-10 text-white md:px-6 md:pt-40 md:pb-16">
       <div className="mx-auto max-w-5xl">
         <Link
           to={`/events/${eventId}`}

@@ -123,7 +123,7 @@ export default function Certificates() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
-      <div className="mx-auto max-w-7xl px-6 py-10 md:py-16">
+      <div className="mx-auto max-w-7xl px-6 pt-36 pb-10 md:pt-40 md:pb-16">
         <div className="mb-10">
           <Link
             to="/events"
