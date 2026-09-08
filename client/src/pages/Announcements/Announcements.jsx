@@ -625,7 +625,7 @@ export default function Announcements() {
           overflow-hidden
           border-b
           border-white/10
-          pt-32
+          pt-36
           pb-16
           md:pt-40
           md:pb-20

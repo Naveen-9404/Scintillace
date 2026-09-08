@@ -59,7 +59,7 @@ export default function Contact() {
       <section className="relative overflow-hidden border-b border-white/10">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(139,92,246,0.16),transparent_35%),radial-gradient(circle_at_bottom_left,rgba(217,70,239,0.10),transparent_35%)]" />
 
-        <div className="relative mx-auto max-w-7xl px-6 py-20 md:px-10 lg:px-12 lg:py-28">
+        <div className="relative mx-auto max-w-7xl px-6 pt-36 pb-20 md:px-10 lg:px-12 md:pt-40 lg:pb-28">
           <p className="text-xs font-bold uppercase tracking-[0.35em] text-violet-400">
             SCINTILLACE 2K26
           </p>

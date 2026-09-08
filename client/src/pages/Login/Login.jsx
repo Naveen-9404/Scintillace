@@ -212,7 +212,7 @@ export default function Login() {
    */
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-slate-950 px-4 py-12 text-white">
+    <main className="relative min-h-screen overflow-hidden bg-slate-950 px-4 pt-36 pb-12 md:pt-40 text-white">
 
       {/* Background */}
 

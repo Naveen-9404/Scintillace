@@ -188,7 +188,7 @@ export default function Events() {
 
   return (
     <main className="min-h-screen bg-slate-950">
-      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <section className="mx-auto max-w-7xl px-4 pt-36 pb-12 sm:px-6 md:pt-40 lg:px-8">
 
         {/* ====================================================
             Header

@@ -39,7 +39,7 @@ export default function Presentations() {
           Hero
           ===================================================== */}
 
-      <section className="relative overflow-hidden py-28">
+      <section className="relative overflow-hidden pt-36 pb-28 md:pt-40">
         {/* Background */}
         <div className="absolute inset-0">
           <div className="absolute left-1/4 top-0 h-[500px] w-[500px] rounded-full bg-cyan-500/10 blur-[160px]" />
