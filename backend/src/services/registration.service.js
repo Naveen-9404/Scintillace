@@ -1048,9 +1048,77 @@ const updateRegistrationStatus =
 
 /**
  * ============================================================
+ * ============================================================
  * Update Payment Status
  * ============================================================
  */
+
+const sendPostApprovalEmailsInBackground = async (updatedRegistration, tickets) => {
+  try {
+    const getReferenceId = (reference) => reference?._id || reference;
+
+    const user = updatedRegistration.user ? await User.findById(getReferenceId(updatedRegistration.user)).lean() : null;
+    const event = await eventRepository.findByIdRaw(getReferenceId(updatedRegistration.event));
+
+    if (event && tickets.length > 0) {
+      let payment = await paymentRepository.findPendingByRegistration(updatedRegistration._id);
+
+      if (!payment) {
+        payment = {
+          amount: event.registrationFee,
+          currency: event.currency || "INR",
+          paymentId: "OFFLINE / MANUAL",
+          orderId: "OFFLINE / MANUAL",
+          paidAt: new Date(),
+        };
+      }
+
+      const RegistrationModel = mongoose.model("Registration");
+      const fullRegistration = await RegistrationModel.findById(updatedRegistration._id).populate("team").lean();
+
+      for (const ticket of tickets) {
+        let participantEmail = "";
+        let participantName = "";
+
+        if (ticket.teamMemberId && fullRegistration.team && fullRegistration.team.members) {
+          const member = fullRegistration.team.members.find(m => m._id.toString() === ticket.teamMemberId.toString());
+          if (member) {
+            participantEmail = member.participantEmail;
+            participantName = member.participantName || "Team Member";
+          }
+        } else {
+          participantEmail = fullRegistration.participantEmail;
+          participantName = fullRegistration.participantName || "Participant";
+        }
+
+        if (!participantEmail && user && user.email) {
+          participantEmail = user.email;
+          participantName = user.fullName || participantName;
+        }
+
+        if (participantEmail && ticket.qrToken) {
+          const pdfBuffer = await receiptUtil.generateRegistrationPDF({
+            payment,
+            registration: fullRegistration,
+            ticket,
+          });
+
+          await emailUtil.sendRegistrationConfirmation({
+            to: participantEmail,
+            participantName,
+            eventName: event.title,
+            ticketNumber: ticket.ticketNumber,
+            pdfBuffer,
+          });
+        }
+      }
+
+      logger.info(`Registration confirmation emails sent successfully for registration ${updatedRegistration._id}.`);
+    }
+  } catch (error) {
+    logger.error(`Registration confirmation email failed for registration ${updatedRegistration._id}: ${error.message}`);
+  }
+};
 
 const updatePaymentStatus =
   async (
@@ -1128,73 +1196,17 @@ const updatePaymentStatus =
       registration.paymentStatus !== PAYMENT_STATUS.PAID
     ) {
       try {
-        const getReferenceId = (reference) => reference?._id || reference;
-        
         let tickets = await mongoose.model("Ticket").find({ registration: updatedRegistration._id }).select("+qrToken").lean();
         if (tickets.length === 0) {
           tickets = await ticketService.createTicketsForRegistration(updatedRegistration._id);
         }
 
-        const user = updatedRegistration.user ? await User.findById(getReferenceId(updatedRegistration.user)).lean() : null;
-        const event = await eventRepository.findByIdRaw(getReferenceId(updatedRegistration.event));
-
-        if (event && tickets.length > 0) {
-          let payment = await paymentRepository.findPendingByRegistration(updatedRegistration._id);
-          
-          if (!payment) {
-            payment = {
-              amount: event.registrationFee,
-              currency: event.currency || "INR",
-              paymentId: "OFFLINE / MANUAL",
-              orderId: "OFFLINE / MANUAL",
-              paidAt: new Date(),
-            };
-          }
-
-          const RegistrationModel = mongoose.model("Registration");
-          const fullRegistration = await RegistrationModel.findById(updatedRegistration._id).populate("team").lean();
-
-          for (const ticket of tickets) {
-            let participantEmail = "";
-            let participantName = "";
-
-            if (ticket.teamMemberId && fullRegistration.team && fullRegistration.team.members) {
-              const member = fullRegistration.team.members.find(m => m._id.toString() === ticket.teamMemberId.toString());
-              if (member) {
-                participantEmail = member.participantEmail;
-                participantName = member.participantName || "Team Member";
-              }
-            } else {
-              participantEmail = fullRegistration.participantEmail;
-              participantName = fullRegistration.participantName || "Participant";
-            }
-
-            if (!participantEmail && user && user.email) {
-              participantEmail = user.email;
-              participantName = user.fullName || participantName;
-            }
-
-            if (participantEmail && ticket.qrToken) {
-              const pdfBuffer = await receiptUtil.generateRegistrationPDF({
-                payment,
-                registration: fullRegistration,
-                ticket,
-              });
-
-              await emailUtil.sendRegistrationConfirmation({
-                to: participantEmail,
-                participantName,
-                eventName: event.title,
-                ticketNumber: ticket.ticketNumber,
-                pdfBuffer,
-              });
-            }
-          }
-          
-          logger.info(`Registration confirmation emails sent successfully for registration ${updatedRegistration._id}.`);
-        }
+        // Run post-approval PDF and SMTP work asynchronously without awaiting it
+        sendPostApprovalEmailsInBackground(updatedRegistration, tickets).catch((error) => {
+          logger.error(`Unhandled error in background email processing for registration ${updatedRegistration._id}: ${error.message}`);
+        });
       } catch (error) {
-        logger.error(`Registration confirmation email failed for registration ${updatedRegistration._id}: ${error.message}`);
+        logger.error(`Ticket creation failed for registration ${updatedRegistration._id}: ${error.message}`);
       }
     }
 
