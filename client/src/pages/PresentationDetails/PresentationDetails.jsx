@@ -20,6 +20,7 @@ const presentationEvents = {
       "Present your technical research, ideas, innovations and concepts through an engaging paper presentation.",
     icon: FileText,
     color: "text-cyan-400",
+    eventId: "6a8937a5bebeb93493556c6d",
   },
 
   "poster-presentation": {
@@ -29,6 +30,7 @@ const presentationEvents = {
       "Present your technical concepts, research and innovative ideas through an engaging and informative poster.",
     icon: Image,
     color: "text-violet-400",
+    eventId: "6a8937a5bebeb93493556c6e",
   },
 };
 
@@ -312,7 +314,7 @@ export default function PresentationDetails() {
                 </div>
 
                 <Link
-                  to="/register"
+                  to={`/events/${event.eventId}/register`}
                   className="group mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-400 px-6 py-4 font-semibold text-slate-950 transition-all hover:-translate-y-1 hover:bg-cyan-300 hover:shadow-[0_0_30px_rgba(34,211,238,.35)]"
                 >
                   Register Now

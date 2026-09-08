@@ -255,7 +255,7 @@ export default function Workshop() {
 
                 {/* Register */}
                 <Link
-                  to="/register"
+                  to="/events/6a8937a5bebeb93493556c6c/register"
                   className="group mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-400 px-6 py-4 font-semibold text-slate-950 transition-all hover:-translate-y-1 hover:bg-cyan-300 hover:shadow-[0_0_30px_rgba(34,211,238,.35)]"
                 >
                   Register Now

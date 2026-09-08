@@ -255,7 +255,7 @@ export default function HardwareExpo() {
 
                 {/* Register */}
                 <Link
-                  to="/register"
+                  to="/events/6a8937a5bebeb93493556c6f/register"
                   className="group mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-violet-400 px-6 py-4 font-semibold text-slate-950 transition-all hover:-translate-y-1 hover:bg-violet-300 hover:shadow-[0_0_30px_rgba(167,139,250,.35)]"
                 >
                   Register Now
