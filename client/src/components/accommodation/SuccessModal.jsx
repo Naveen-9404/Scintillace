@@ -160,13 +160,7 @@ const SuccessModal = ({
    * ==========================================================
    */
 
-  const handleViewBooking = () => {
-    onClose();
 
-    navigate(
-      "/dashboard/accommodation",
-    );
-  };
 
   const handleContinueBrowsing = () => {
     onClose();
@@ -526,15 +520,7 @@ const SuccessModal = ({
 
                 <div className="flex gap-4 p-8">
 
-                  <button
-                    type="button"
-                    onClick={
-                      handleViewBooking
-                    }
-                    className="flex-1 rounded-xl bg-blue-600 py-4 font-semibold text-white transition hover:bg-blue-700"
-                  >
-                    View My Booking
-                  </button>
+
 
                   <button
                     type="button"

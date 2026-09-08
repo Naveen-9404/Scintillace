@@ -8,6 +8,7 @@ function PublicRoute({
   children,
 }) {
   const {
+    user,
     isAuthenticated,
     loading,
   } = useAuth();
@@ -17,9 +18,13 @@ function PublicRoute({
   }
 
   if (isAuthenticated) {
+    const isAdmin =
+      user?.role === "SUPER_ADMIN" ||
+      user?.role === "FACULTY";
+
     return (
       <Navigate
-        to="/dashboard"
+        to={isAdmin ? "/admin" : "/"}
         replace
       />
     );
