@@ -172,7 +172,7 @@ export default function CTA() {
           <div className="mt-14 flex flex-col items-center justify-center gap-5 sm:flex-row">
 
             <Link
-              to="/register"
+              to="/events"
               className="group inline-flex items-center gap-3 rounded-xl bg-cyan-400 px-8 py-4 font-semibold text-slate-950 transition-all hover:-translate-y-1 hover:bg-cyan-300 hover:shadow-[0_0_35px_rgba(34,211,238,.35)]"
             >
               Register Now

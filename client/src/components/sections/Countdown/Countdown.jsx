@@ -210,7 +210,7 @@ export default function Countdown() {
           className="mt-14 flex flex-col items-center justify-center gap-5 sm:flex-row"
         >
           <Link
-            to="/register"
+            to="/events"
             className="inline-flex items-center gap-2 rounded-xl bg-primary px-8 py-4 font-semibold text-primary-foreground shadow-glow transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02]"
           >
             Register Now

@@ -204,7 +204,7 @@ export default function MobileMenu({
               {/* Register */}
 
               <Link
-                to="/register"
+                to="/events"
                 onClick={onClose}
                 className="rounded-xl bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 px-4 py-3 text-center font-semibold text-white shadow-lg shadow-cyan-500/30 transition-all duration-300 hover:scale-[1.02] hover:shadow-cyan-400/50"
               >
