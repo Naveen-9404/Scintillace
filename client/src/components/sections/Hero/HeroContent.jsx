@@ -178,7 +178,6 @@ export default function HeroContent() {
             hover:-translate-y-1
             hover:bg-cyan-300
             hover:shadow-[0_0_35px_rgba(34,211,238,.45)]
-            active:scale-95
           "
         >
           <span
