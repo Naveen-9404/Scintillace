@@ -116,7 +116,7 @@ export default function HeroContent() {
             &
           </span>
           <span className="block">
-            Electronics and Communication House for Inclusive Programs (E-CHIP)
+            Electronics and Communication House for Inquisitive Programs (E-CHIP)
           </span>
         </div>
 
