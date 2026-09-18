@@ -41,6 +41,8 @@ export default function EventCard({
   const participation =
     event?.type === "TEAM"
       ? "Team Event"
+      : event?.type === "INDIVIDUAL_OR_TEAM"
+      ? "Individual or Team Event"
       : "Individual Event";
 
   const fee =
@@ -52,6 +54,8 @@ export default function EventCard({
       ? `₹${fee} / ${
           event?.type === "TEAM"
             ? "team"
+            : event?.type === "INDIVIDUAL_OR_TEAM"
+            ? "registration"
             : "person"
         }`
       : "FREE";

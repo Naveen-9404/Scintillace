@@ -42,6 +42,8 @@ export default function EventRegistration() {
   const [loadingAssets, setLoadingAssets] = useState(false);
   const [downloadingCertId, setDownloadingCertId] = useState(null);
 
+  const [registrationMode, setRegistrationMode] = useState("INDIVIDUAL");
+
   const [teamName, setTeamName] = useState("");
   const [projectTitle, setProjectTitle] = useState("");
   const [participants, setParticipants] = useState([
@@ -55,23 +57,28 @@ export default function EventRegistration() {
     }
   ]);
 
-  const isTeamEvent = event?.type === "TEAM";
+  const isTeamEvent = event?.type === "TEAM" || (event?.type === "INDIVIDUAL_OR_TEAM" && registrationMode === "TEAM");
   const lowerTitle = event?.title?.toLowerCase() || "";
   const requiresProjectTitle = lowerTitle.includes("paper") || lowerTitle.includes("poster") || lowerTitle.includes("hardware");
 
   useEffect(() => {
-    if (event && event.type === "TEAM") {
-      const max = event.teamSize || 2;
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setParticipants(prev => {
-        const next = [...prev];
-        while (next.length < max) {
-          next.push({ fullName: "", email: "", phone: "", collegeId: "", department: "", yearOfStudy: "" });
-        }
-        return next;
-      });
+    if (event) {
+      if (isTeamEvent) {
+        const max = event.teamSize || 2;
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setParticipants(prev => {
+          const next = [...prev];
+          while (next.length < max) {
+            next.push({ fullName: "", email: "", phone: "", collegeId: "", department: "", yearOfStudy: "" });
+          }
+          return next;
+        });
+      } else {
+        // Only keep the first participant (leader)
+        setParticipants(prev => [prev[0]]);
+      }
     }
-  }, [event]);
+  }, [event, registrationMode, isTeamEvent]);
 
   const handleParticipantChange = (index, field, value) => {
     setParticipants(prev => {
@@ -137,7 +144,7 @@ export default function EventRegistration() {
   const handleRegister = async () => {
     if (!event) return;
 
-    const isTeamEvent = event.type === "TEAM";
+    const isTeamEvent = event.type === "TEAM" || (event.type === "INDIVIDUAL_OR_TEAM" && registrationMode === "TEAM");
     
     if (isTeamEvent) {
       if (!teamName.trim()) {
@@ -156,6 +163,10 @@ export default function EventRegistration() {
          }
       }
     } else {
+       if (requiresProjectTitle && !projectTitle.trim()) {
+         setError("Project / Topic Title is required.");
+         return;
+       }
        const p = participants[0];
        if (!p.fullName || !p.email || !p.phone || !p.collegeId || !p.department || !p.yearOfStudy) {
           setError("Please fill in all required participant details.");
@@ -176,6 +187,7 @@ export default function EventRegistration() {
         collegeId: leader.collegeId,
         department: leader.department,
         yearOfStudy: leader.yearOfStudy,
+        projectTitle: projectTitle, // Add it for individual mode too
       };
 
       if (isTeamEvent) {
@@ -598,6 +610,48 @@ export default function EventRegistration() {
                         </h2>
                       </div>
                       
+                      {event?.type === "INDIVIDUAL_OR_TEAM" && (
+                        <div className="mb-8 flex gap-6">
+                          <label className="flex items-center gap-2 text-white cursor-pointer select-none font-medium">
+                            <input
+                              type="radio"
+                              name="registrationMode"
+                              value="INDIVIDUAL"
+                              checked={registrationMode === "INDIVIDUAL"}
+                              onChange={() => setRegistrationMode("INDIVIDUAL")}
+                              className="h-4 w-4 accent-violet-500"
+                            />
+                            Register as Individual
+                          </label>
+                          <label className="flex items-center gap-2 text-white cursor-pointer select-none font-medium">
+                            <input
+                              type="radio"
+                              name="registrationMode"
+                              value="TEAM"
+                              checked={registrationMode === "TEAM"}
+                              onChange={() => setRegistrationMode("TEAM")}
+                              className="h-4 w-4 accent-violet-500"
+                            />
+                            Register as a Team
+                          </label>
+                        </div>
+                      )}
+
+                      {!isTeamEvent && requiresProjectTitle && (
+                        <div className="mb-8 flex flex-col gap-4">
+                          <div>
+                            <label className="text-sm font-medium text-zinc-400 mb-2 block">Project / Topic Title *</label>
+                            <input
+                              type="text"
+                              value={projectTitle}
+                              onChange={(e) => setProjectTitle(e.target.value)}
+                              placeholder="Enter project or topic title"
+                              className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-white focus:border-violet-500"
+                            />
+                          </div>
+                        </div>
+                      )}
+
                       {isTeamEvent && (
                         <div className="mb-8 flex flex-col gap-4">
                           <div>

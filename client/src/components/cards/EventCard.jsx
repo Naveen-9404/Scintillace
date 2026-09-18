@@ -56,6 +56,9 @@ const getParticipationLabel = (
   if (event.type === "TEAM") {
     return "Team Event";
   }
+  if (event.type === "INDIVIDUAL_OR_TEAM") {
+    return "Individual or Team Event";
+  }
 
   return "Individual Event";
 };
@@ -78,6 +81,9 @@ const getRegistrationFee = (
 
   if (event.type === "TEAM") {
     return `₹${fee} / team`;
+  }
+  if (event.type === "INDIVIDUAL_OR_TEAM") {
+    return `₹${fee} / registration`;
   }
 
   return `₹${fee} / person`;

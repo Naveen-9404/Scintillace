@@ -4,7 +4,7 @@ import { FaCalendarAlt, FaRupeeSign, FaArrowLeft } from "react-icons/fa";
 import { createGuestAccommodation, getGuestAccommodation } from "../../api/accommodation.api";
 import PaymentProofUpload from "../../components/events/PaymentProofUpload";
 
-export default function PublicAccommodation({ event, registeredData, guestToken, onBack }) {
+export default function PublicAccommodation({ registeredData, guestToken, onBack }) {
   const [accommodations, setAccommodations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -40,8 +40,8 @@ export default function PublicAccommodation({ event, registeredData, guestToken,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [registeredData, guestToken]);
 
-  const isTeamEvent = event.type === "TEAM";
-  const members = isTeamEvent && registeredData.team ? registeredData.team.members : [];
+  const isTeamRegistration = Boolean(registeredData.team);
+  const members = isTeamRegistration ? registeredData.team.members : [];
 
   const getMemberBooking = (memberId) => {
     return accommodations.find(a => a.teamMemberId === memberId);
@@ -114,7 +114,7 @@ export default function PublicAccommodation({ event, registeredData, guestToken,
         screenshotPublicId: paymentScreenshot.publicId,
       };
 
-      if (isTeamEvent && bookingMember !== "INDIVIDUAL") {
+      if (isTeamRegistration && bookingMember !== "INDIVIDUAL") {
         payload.teamMemberId = bookingMember._id;
       }
 
@@ -285,7 +285,7 @@ export default function PublicAccommodation({ event, registeredData, guestToken,
       </div>
       
       <p className="text-zinc-400 mb-6">
-        Accommodation is booked individually. You can request accommodation for {isTeamEvent ? "each team member" : "yourself"}. The cost is ₹200 per day.
+        Accommodation is booked individually. You can request accommodation for {isTeamRegistration ? "each team member" : "yourself"}. The cost is ₹200 per day.
       </p>
 
       {error && (
@@ -295,7 +295,7 @@ export default function PublicAccommodation({ event, registeredData, guestToken,
       )}
 
       <div className="grid gap-6">
-        {!isTeamEvent && (
+        {!isTeamRegistration && (
           <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <p className="font-semibold text-white text-lg">{registeredData.user.fullName}</p>
@@ -321,7 +321,7 @@ export default function PublicAccommodation({ event, registeredData, guestToken,
           </div>
         )}
 
-        {isTeamEvent && members.map((member, idx) => {
+        {isTeamRegistration && members.map((member, idx) => {
           const booking = getMemberBooking(member._id);
           return (
             <div key={member._id} className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">

@@ -110,6 +110,24 @@ const registrationSchema = new Schema(
 
     /**
      * ========================================================
+     * Individual Project / Paper Title
+     * ========================================================
+     *
+     * Stored here when an individual registers for an
+     * INDIVIDUAL_OR_TEAM event without creating a Team document.
+     *
+     * Team registrations will continue to store their
+     * projectTitle on the Team document.
+     */
+
+    projectTitle: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    /**
+     * ========================================================
      * Event
      * ========================================================
      */

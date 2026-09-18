@@ -26,6 +26,7 @@ export const EVENT_CATEGORIES = Object.freeze({
 export const EVENT_TYPES = Object.freeze({
   INDIVIDUAL: "INDIVIDUAL",
   TEAM: "TEAM",
+  INDIVIDUAL_OR_TEAM: "INDIVIDUAL_OR_TEAM",
 });
 
 /**

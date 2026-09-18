@@ -187,7 +187,7 @@ registrationOpen: true,
       "TECHNICAL",
 
     type:
-      "TEAM",
+      "INDIVIDUAL_OR_TEAM",
 
     registrationMode:
       "PAID",
@@ -299,7 +299,7 @@ registrationOpen: true,
       "TECHNICAL",
 
     type:
-      "TEAM",
+      "INDIVIDUAL_OR_TEAM",
 
     registrationMode:
       "PAID",
@@ -409,7 +409,7 @@ registrationOpen: true,
       "TECHNICAL",
 
     type:
-      "TEAM",
+      "INDIVIDUAL_OR_TEAM",
 
     registrationMode:
       "PAID",

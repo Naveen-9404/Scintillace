@@ -537,7 +537,7 @@ eventSchema.pre(
      */
 
     if (
-  this.type === EVENT_TYPES.TEAM &&
+  (this.type === EVENT_TYPES.TEAM || this.type === EVENT_TYPES.INDIVIDUAL_OR_TEAM) &&
   this.teamSize !== null &&
   this.teamSize !== undefined &&
   this.teamSize < 1

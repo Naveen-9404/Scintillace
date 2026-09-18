@@ -150,7 +150,7 @@ const applyRegistrationConfiguration = (
     data.teamSize = null;
   }
 
-  if (type === EVENT_TYPES.TEAM) {
+  if (type === EVENT_TYPES.TEAM || type === EVENT_TYPES.INDIVIDUAL_OR_TEAM) {
     if (
       data.teamSize ===
         undefined ||

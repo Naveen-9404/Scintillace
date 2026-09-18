@@ -435,6 +435,7 @@ const createRegistration =
     teamId = null,
     screenshotUrl = null,
     screenshotPublicId = null,
+    projectTitle = "",
   ) => {
     assertValidObjectId(
       userId,
@@ -497,8 +498,8 @@ const createRegistration =
     let existingRegistration = null;
 
     if (
-      event.type ===
-      EVENT_TYPES.TEAM
+      event.type === EVENT_TYPES.TEAM ||
+      (event.type === EVENT_TYPES.INDIVIDUAL_OR_TEAM && teamId)
     ) {
       const teamResult =
         await validateTeamRegistration(
@@ -507,16 +508,11 @@ const createRegistration =
           teamId,
         );
 
-      team =
-        teamResult.team;
-
-      participantCount =
-        teamResult.participantCount;
-
-      existingRegistration =
-        teamResult.existingRegistration;
+      team = teamResult.team;
+      participantCount = teamResult.participantCount;
+      existingRegistration = teamResult.existingRegistration;
     } else {
-      if (teamId) {
+      if (teamId && event.type !== EVENT_TYPES.INDIVIDUAL_OR_TEAM) {
         throw new ApiError(
           "Team registration is not allowed for an individual event.",
           HTTP_STATUS.BAD_REQUEST,
@@ -582,6 +578,8 @@ const createRegistration =
       team: team
         ? team._id
         : null,
+
+      projectTitle: team ? "" : projectTitle,
 
       status:
         event.isPaid
@@ -1490,7 +1488,11 @@ const createPublicRegistration = async (guestData) => {
 
   let participantCount = 1;
 
-  if (event.type === EVENT_TYPES.TEAM) {
+  if (event.type === EVENT_TYPES.INDIVIDUAL && teamName) {
+    throw new ApiError("Team registration is not allowed for this event.", HTTP_STATUS.BAD_REQUEST);
+  }
+
+  if (event.type === EVENT_TYPES.TEAM || (event.type === EVENT_TYPES.INDIVIDUAL_OR_TEAM && teamName)) {
     if (!teamName || !members || !Array.isArray(members) || members.length < 1) {
       throw new ApiError("Team name and members are required for team events.", HTTP_STATUS.BAD_REQUEST);
     }
@@ -1623,6 +1625,7 @@ const createPublicRegistration = async (guestData) => {
       event: event._id,
       festival: getFestivalId(event),
       team: null,
+      projectTitle: projectTitle ? projectTitle.trim() : "",
       status: event.isPaid ? REGISTRATION_STATUS.PENDING : REGISTRATION_STATUS.REGISTERED,
       paymentStatus: event.isPaid ? PAYMENT_STATUS.PENDING : PAYMENT_STATUS.NOT_REQUIRED,
       guestTokenHash,

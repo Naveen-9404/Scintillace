@@ -32,6 +32,7 @@ const EVENT_CATEGORIES = [
 const EVENT_TYPES = [
   "INDIVIDUAL",
   "TEAM",
+  "INDIVIDUAL_OR_TEAM",
 ];
 
 const EVENT_STATUSES = [
@@ -173,7 +174,7 @@ function getInitialForm(event) {
 
     teamSize:
       event.teamSize ??
-      (event.type === "TEAM"
+      (event.type === "TEAM" || event.type === "INDIVIDUAL_OR_TEAM"
         ? "2"
         : "1"),
 
@@ -478,7 +479,7 @@ export default function EventForm({
     }
 
     if (
-      form.type === "TEAM"
+      form.type === "TEAM" || form.type === "INDIVIDUAL_OR_TEAM"
     ) {
       if (
         !Number.isInteger(
@@ -1079,7 +1080,7 @@ export default function EventForm({
                     type="number"
                     min={
                       form.type ===
-                      "TEAM"
+                      "TEAM" || form.type === "INDIVIDUAL_OR_TEAM"
                         ? "2"
                         : "1"
                     }

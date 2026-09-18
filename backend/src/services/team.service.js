@@ -150,10 +150,11 @@ const assertTeamRegistrationAvailable =
     }
 
     if (
-      event.type !== EVENT_TYPES.TEAM
+      event.type !== EVENT_TYPES.TEAM &&
+      event.type !== EVENT_TYPES.INDIVIDUAL_OR_TEAM
     ) {
       throw new ApiError(
-        "This is not a team event.",
+        "This event does not support team registration.",
         HTTP_STATUS.BAD_REQUEST,
       );
     }

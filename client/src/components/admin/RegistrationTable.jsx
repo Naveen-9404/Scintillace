@@ -436,7 +436,7 @@ function RegistrationDetailsModal({
                 ],
                 [
                   "Project Title",
-                  team?.projectTitle ||
+                  team?.projectTitle || registration?.projectTitle ||
                     "—",
                 ],
                 [

@@ -47,9 +47,10 @@ const formatEventDate = (value) => {
 };
 
 const getParticipationText = (type) => {
-  return String(type).toUpperCase() === "TEAM"
-    ? "Team Event"
-    : "Individual Event";
+  const t = String(type).toUpperCase();
+  if (t === "TEAM") return "Team Event";
+  if (t === "INDIVIDUAL_OR_TEAM") return "Individual or Team Event";
+  return "Individual Event";
 };
 
 const getRegistrationFeeText = (event) => {
@@ -59,10 +60,10 @@ const getRegistrationFeeText = (event) => {
     return "FREE";
   }
 
-  const unit =
-    String(event?.type).toUpperCase() === "TEAM"
-      ? "team"
-      : "person";
+  const t = String(event?.type).toUpperCase();
+  let unit = "person";
+  if (t === "TEAM") unit = "team";
+  if (t === "INDIVIDUAL_OR_TEAM") unit = "registration";
 
   return `₹${fee} / ${unit}`;
 };
