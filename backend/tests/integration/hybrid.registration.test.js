@@ -139,7 +139,7 @@ describe("Hybrid Registration Tests (INDIVIDUAL_OR_TEAM)", () => {
       .send({
         eventId: hybridEvent._id,
         projectTitle: "My Solo Project",
-        participantName: "Solo Coder",
+        participantName: "Hybrid Individual Test Participant",
         participantEmail: "solo@test.com",
         participantPhone: "9999999999",
         collegeId: "C1",
@@ -155,6 +155,7 @@ describe("Hybrid Registration Tests (INDIVIDUAL_OR_TEAM)", () => {
     const reg = await Registration.findOne({ event: hybridEvent._id });
     expect(reg).toBeTruthy();
     expect(reg.projectTitle).toBe("My Solo Project");
+    expect(reg.participantName).toBe("Hybrid Individual Test Participant");
     expect(reg.team).toBeFalsy(); // No team created
     
     // Duplicate Protection check for hybrid events
@@ -163,7 +164,7 @@ describe("Hybrid Registration Tests (INDIVIDUAL_OR_TEAM)", () => {
       .send({
         eventId: hybridEvent._id,
         projectTitle: "My Solo Project 2",
-        participantName: "Solo Coder",
+        participantName: "Hybrid Individual Test Participant",
         participantEmail: "solo@test.com", // Same email
         participantPhone: "9999999999",
         collegeId: "C1",

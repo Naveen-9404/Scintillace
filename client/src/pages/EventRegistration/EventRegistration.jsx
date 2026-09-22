@@ -48,7 +48,7 @@ export default function EventRegistration() {
   const [projectTitle, setProjectTitle] = useState("");
   const [participants, setParticipants] = useState([
     {
-      fullName: "",
+      participantName: "",
       email: "",
       phone: "",
       collegeId: "",
@@ -69,7 +69,7 @@ export default function EventRegistration() {
         setParticipants(prev => {
           const next = [...prev];
           while (next.length < max) {
-            next.push({ fullName: "", email: "", phone: "", collegeId: "", department: "", yearOfStudy: "" });
+            next.push({ participantName: "", email: "", phone: "", collegeId: "", department: "", yearOfStudy: "" });
           }
           return next;
         });
@@ -157,7 +157,7 @@ export default function EventRegistration() {
       }
       for (let i = 0; i < participants.length; i++) {
          const p = participants[i];
-         if (!p.fullName || !p.email || !p.phone || !p.collegeId || !p.department || !p.yearOfStudy) {
+         if (!p.participantName || !p.email || !p.phone || !p.collegeId || !p.department || !p.yearOfStudy) {
             setError(`Please fill all required details for Participant ${i + 1}`);
             return;
          }
@@ -168,7 +168,7 @@ export default function EventRegistration() {
          return;
        }
        const p = participants[0];
-       if (!p.fullName || !p.email || !p.phone || !p.collegeId || !p.department || !p.yearOfStudy) {
+       if (!p.participantName || !p.email || !p.phone || !p.collegeId || !p.department || !p.yearOfStudy) {
           setError("Please fill in all required participant details.");
           return;
        }
@@ -181,7 +181,7 @@ export default function EventRegistration() {
       const leader = participants[0];
       const registrationPayload = {
         eventId: eventId,
-        participantName: leader.fullName,
+        participantName: leader.participantName,
         participantEmail: leader.email,
         participantPhone: leader.phone,
         collegeId: leader.collegeId,
@@ -194,7 +194,7 @@ export default function EventRegistration() {
         registrationPayload.teamName = teamName;
         registrationPayload.projectTitle = projectTitle;
         registrationPayload.members = participants.map(p => ({
-          participantName: p.fullName,
+          participantName: p.participantName,
           participantEmail: p.email,
           participantPhone: p.phone,
           collegeId: p.collegeId,
@@ -687,8 +687,10 @@ export default function EventRegistration() {
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div className="flex flex-col gap-1.5">
-                                <label className="text-xs text-zinc-400 font-medium">Full Name *</label>
-                                <input type="text" value={p.fullName} onChange={(e) => handleParticipantChange(index, "fullName", e.target.value)} className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-white focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500" />
+                                <label className="text-xs text-zinc-400 font-medium">
+                                  {isTeamEvent ? "Full Name *" : "Participant Name *"}
+                                </label>
+                                <input type="text" value={p.participantName} onChange={(e) => handleParticipantChange(index, "participantName", e.target.value)} className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-white focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500" />
                               </div>
                               <div className="flex flex-col gap-1.5">
                                 <label className="text-xs text-zinc-400 font-medium">Email *</label>
