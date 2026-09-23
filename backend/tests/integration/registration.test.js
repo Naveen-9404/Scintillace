@@ -110,7 +110,7 @@ describe("Registration Integration Tests", () => {
           course: "B.Tech",
           year: "3",
         });
-      
+
       expect(res.status).toBe(201);
       expect(res.body.success).toBe(true);
       expect(res.body.data.registration.status).toBe("REGISTERED");
@@ -132,7 +132,7 @@ describe("Registration Integration Tests", () => {
         .set("Authorization", `Bearer ${user1Token}`)
         .send(payload)
         .expect(201);
-      
+
       await request(app)
         .post(`/api/v1/registrations`)
         .set("Authorization", `Bearer ${user1Token}`)
@@ -166,7 +166,7 @@ describe("Registration Integration Tests", () => {
         users.push(u);
       }
 
-      const reqs = users.map((u) => 
+      const reqs = users.map((u) =>
         request(app)
           .post(`/api/v1/registrations`)
           .set("Authorization", `Bearer ${u.token}`)
@@ -180,12 +180,12 @@ describe("Registration Integration Tests", () => {
             year: "1",
           })
       );
-      
+
       const responses = await Promise.all(reqs);
-      
+
       const successful = responses.filter(r => r.status === 201);
       const failed = responses.filter(r => r.status !== 201);
-      
+
       expect(successful.length).toBe(15);
       expect(failed.length).toBe(0);
     }, 30000);
@@ -225,7 +225,7 @@ describe("Registration Integration Tests", () => {
           event: paidEventId.toString(),
           participantName: "User One",
         });
-      
+
       expect(res.status).toBe(400);
       expect(res.body.message).toContain("Payment screenshot is required");
     });
@@ -240,7 +240,7 @@ describe("Registration Integration Tests", () => {
           screenshotUrl: "https://example.com/screenshot.png",
           screenshotPublicId: "screenshot_123",
         });
-      
+
       expect(res.status).toBe(201);
       expect(res.body.success).toBe(true);
       expect(res.body.data.paymentRequired).toBe(true);
@@ -339,7 +339,7 @@ describe("Registration Integration Tests", () => {
         .post(`/api/v1/registrations/${pendingRegId}/reject`)
         .set("Authorization", `Bearer ${adminToken}`)
         .send({ rejectionReason: "Invalid screenshot" });
-      
+
       expect(res.status).toBe(200);
       expect(res.body.data.registration.status).toBe("REJECTED");
       expect(res.body.data.registration.paymentStatus).toBe("FAILED");
@@ -351,6 +351,114 @@ describe("Registration Integration Tests", () => {
         .set("Authorization", `Bearer ${adminToken}`);
       expect(payRes.body.data.payment.status).toBe("FAILED");
       expect(payRes.body.data.payment.screenshotUrl).toBeNull();
+    });
+  });
+
+  describe("Manual Payment Approval Flow", () => {
+    let adminToken, adminId;
+    let paidEventId;
+    let pendingRegId;
+
+    beforeEach(async () => {
+      const admin = await registerUser("manual.admin@example.com");
+      adminToken = admin.token;
+      adminId = admin.id;
+
+      // Make admin SUPER_ADMIN directly in DB
+      await User.findByIdAndUpdate(adminId, { role: "SUPER_ADMIN" });
+
+      const paidEvent = await Event.create({
+        title: "Test Manual Paid Event",
+        festival: festivalId,
+        category: "TECHNICAL",
+        type: "INDIVIDUAL",
+        status: "PUBLISHED",
+        registrationMode: "PAID",
+        isPaid: true,
+        registrationFee: 250,
+        currency: "INR",
+        registrationRequired: true,
+        registrationOpen: true,
+        maxParticipants: 10,
+        createdBy: user1Id,
+        description: "Test description",
+        venue: "Main Stage",
+        startDateTime: new Date(Date.now() + 86400000),
+        endDateTime: new Date(Date.now() + 86400000 * 2),
+      });
+      paidEventId = paidEvent._id;
+
+      // Create a public registration WITHOUT screenshot
+      const res = await request(app)
+        .post(`/api/v1/registrations/public`)
+        .send({
+          eventId: paidEventId.toString(),
+          participantName: "Manual User",
+          participantEmail: "manual@example.com",
+          participantPhone: "9998887776",
+          collegeId: "TEST-MANUAL",
+        });
+
+      pendingRegId = res.body.data.registration._id;
+    });
+
+    it("should successfully create Payment immediately for public registration without screenshot", async () => {
+      const payRes = await request(app)
+        .get(`/api/v1/registrations/${pendingRegId}/payment`)
+        .set("Authorization", `Bearer ${adminToken}`);
+
+      expect(payRes.status).toBe(200);
+      expect(payRes.body.data.payment.status).toBe("PENDING");
+      expect(payRes.body.data.payment.screenshotUrl).toBeNull();
+    });
+
+    it("should fail approval if screenshot is missing and manualVerification is false", async () => {
+      const res = await request(app)
+        .post(`/api/v1/registrations/${pendingRegId}/approve`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ manualVerification: false });
+
+      expect(res.status).toBe(400);
+      expect(res.body.message).toContain("Explicit manual verification is required");
+    });
+
+    it("should succeed approval if screenshot is missing but manualVerification is true", async () => {
+      const res = await request(app)
+        .post(`/api/v1/registrations/${pendingRegId}/approve`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ manualVerification: true, adminNote: "Verified via UPI" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.registration.status).toBe("REGISTERED");
+
+      const payRes = await request(app)
+        .get(`/api/v1/registrations/${pendingRegId}/payment`)
+        .set("Authorization", `Bearer ${adminToken}`);
+
+      expect(payRes.body.data.payment.status).toBe("PAID");
+      expect(payRes.body.data.payment.approvedBy.toString()).toBe(adminId.toString());
+      expect(payRes.body.data.payment.manualVerification).toBe(true);
+      expect(payRes.body.data.payment.adminNote).toBe("Verified via UPI");
+      expect(payRes.body.data.payment.approvedAt).toBeDefined();
+    });
+
+    it("should succeed rejection even if screenshot is missing", async () => {
+      const res = await request(app)
+        .post(`/api/v1/registrations/${pendingRegId}/reject`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ rejectionReason: "Payment not found", adminNote: "Did not pay" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.registration.status).toBe("REJECTED");
+
+      const payRes = await request(app)
+        .get(`/api/v1/registrations/${pendingRegId}/payment`)
+        .set("Authorization", `Bearer ${adminToken}`);
+
+      expect(payRes.body.data.payment.status).toBe("FAILED");
+      expect(payRes.body.data.payment.rejectedBy.toString()).toBe(adminId.toString());
+      expect(payRes.body.data.payment.adminNote).toBe("Did not pay");
+      expect(payRes.body.data.payment.rejectedAt).toBeDefined();
     });
   });
 });

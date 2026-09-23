@@ -179,14 +179,18 @@ export const getPaymentByRegistration = async (id) => {
   return response.data.data.payment;
 };
 
-export const approveRegistration = async (id) => {
-  const response = await apiClient.post(`/registrations/${id}/approve`);
+export const approveRegistration = async (id, { manualVerification = false, adminNote = "" } = {}) => {
+  const response = await apiClient.post(`/registrations/${id}/approve`, {
+    manualVerification,
+    adminNote
+  });
   return response.data.data.registration;
 };
 
-export const rejectRegistration = async (id, rejectionReason) => {
+export const rejectRegistration = async (id, rejectionReason, adminNote = "") => {
   const response = await apiClient.post(`/registrations/${id}/reject`, {
     rejectionReason,
+    adminNote
   });
   return response.data.data.registration;
 };

@@ -511,7 +511,11 @@ const getPaymentByRegistration = asyncHandler(async (req, res) => {
 const approveRegistration = asyncHandler(async (req, res) => {
   const registration = await registrationService.approveRegistration(
     req.params.id,
-    req.user._id
+    req.user._id,
+    {
+      manualVerification: req.body.manualVerification,
+      adminNote: req.body.adminNote
+    }
   );
 
   return res.status(HTTP_STATUS.OK).json({
@@ -527,7 +531,8 @@ const rejectRegistration = asyncHandler(async (req, res) => {
   const registration = await registrationService.rejectRegistration(
     req.params.id,
     req.user._id,
-    req.body.rejectionReason
+    req.body.rejectionReason,
+    req.body.adminNote
   );
 
   return res.status(HTTP_STATUS.OK).json({

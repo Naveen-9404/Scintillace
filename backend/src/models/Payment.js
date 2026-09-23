@@ -265,6 +265,45 @@ const paymentSchema = new Schema(
       type: Date,
       default: null,
     },
+
+    /**
+     * ========================================================
+     * Audit Information
+     * ========================================================
+     */
+
+    approvedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+
+    approvedAt: {
+      type: Date,
+      default: null,
+    },
+
+    rejectedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+
+    rejectedAt: {
+      type: Date,
+      default: null,
+    },
+
+    manualVerification: {
+      type: Boolean,
+      default: false,
+    },
+
+    adminNote: {
+      type: String,
+      trim: true,
+      default: "",
+    },
   },
   {
     timestamps: true,

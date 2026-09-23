@@ -1252,7 +1252,7 @@ const getPaymentByRegistration =
  */
 
 const approveRegistration =
-  async (registrationId, adminId) => {
+  async (registrationId, adminId, { manualVerification = false, adminNote = "" } = {}) => {
     assertValidObjectId(registrationId, "Registration ID");
 
     const registration = await registrationRepository.findById(registrationId);
@@ -1273,6 +1273,10 @@ const approveRegistration =
       throw new ApiError("Payment is not in PENDING status.", HTTP_STATUS.BAD_REQUEST);
     }
 
+    if (!payment.screenshotUrl && !manualVerification) {
+      throw new ApiError("Payment proof is missing. Explicit manual verification is required.", HTTP_STATUS.BAD_REQUEST);
+    }
+
     // Atomic update of Payment to prevent duplicate approval
     const updatedPayment = await mongoose.model("Payment").findOneAndUpdate(
       { _id: payment._id, status: PAYMENT_STATUS.PENDING },
@@ -1280,7 +1284,11 @@ const approveRegistration =
         $set: { 
           status: PAYMENT_STATUS.PAID,
           screenshotUrl: null,
-          screenshotPublicId: null
+          screenshotPublicId: null,
+          approvedBy: adminId,
+          approvedAt: new Date(),
+          manualVerification: !!manualVerification,
+          adminNote: adminNote || ""
         } 
       },
       { new: true }
@@ -1313,7 +1321,7 @@ const approveRegistration =
  */
 
 const rejectRegistration =
-  async (registrationId, adminId, reason) => {
+  async (registrationId, adminId, reason, adminNote = "") => {
     assertValidObjectId(registrationId, "Registration ID");
 
     const registration = await registrationRepository.findById(registrationId);
@@ -1340,7 +1348,10 @@ const rejectRegistration =
         $set: { 
           status: PAYMENT_STATUS.FAILED,
           screenshotUrl: null,
-          screenshotPublicId: null
+          screenshotPublicId: null,
+          rejectedBy: adminId,
+          rejectedAt: new Date(),
+          adminNote: adminNote || reason || ""
         } 
       },
       { new: true }
@@ -1581,6 +1592,22 @@ const createPublicRegistration = async (guestData) => {
       const registration = new mongoose.model('Registration')(registrationData);
       await registration.save({ session });
 
+      if (event.isPaid) {
+        const paymentData = {
+          user: null,
+          registration: registration._id,
+          paymentFor: PAYMENT_FOR.EVENT,
+          amount: event.registrationFee,
+          currency: event.currency || "INR",
+          gateway: PAYMENT_GATEWAY.UPI,
+          screenshotUrl: null,
+          screenshotPublicId: null,
+          status: PAYMENT_STATUS.PENDING,
+        };
+        const payment = new mongoose.model('Payment')(paymentData);
+        await payment.save({ session });
+      }
+
       await session.commitTransaction();
       session.endSession();
 
@@ -1640,6 +1667,21 @@ const createPublicRegistration = async (guestData) => {
         throw new ApiError("You are already registered for this event.", HTTP_STATUS.CONFLICT);
       }
       throw error;
+    }
+
+    if (event.isPaid) {
+      const paymentData = {
+        user: null,
+        registration: registration._id,
+        paymentFor: PAYMENT_FOR.EVENT,
+        amount: event.registrationFee,
+        currency: event.currency || "INR",
+        gateway: PAYMENT_GATEWAY.UPI,
+        screenshotUrl: null,
+        screenshotPublicId: null,
+        status: PAYMENT_STATUS.PENDING,
+      };
+      await paymentRepository.create(paymentData);
     }
 
     return {

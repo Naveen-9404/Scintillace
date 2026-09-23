@@ -258,10 +258,11 @@ function RegistrationDetailsModal({
     registration?.status === "PENDING" && registration?.paymentStatus === "PENDING"
   );
   const [rejectionReason, setRejectionReason] = useState("");
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   useEffect(() => {
     let mounted = true;
-    
+
     if (registration?.status === "PENDING" && registration?.paymentStatus === "PENDING") {
       const load = async () => {
         try {
@@ -277,7 +278,7 @@ function RegistrationDetailsModal({
           }
         }
       };
-      
+
       // We set the initial state as true below, so we don't need to synchronously call setState here
       load();
     }
@@ -473,7 +474,15 @@ function RegistrationDetailsModal({
 
           {registration.status === "PENDING" && registration.paymentStatus === "PENDING" && (
             <div className="mt-6 rounded-2xl border border-blue-500/20 bg-blue-500/5 p-6">
-              <h3 className="mb-4 text-sm font-bold text-blue-300">Admin Payment Verification</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-bold text-blue-300">Admin Payment Verification</h3>
+                {paymentDetails?.manualVerification && (
+                  <span className="rounded-full bg-orange-500/20 px-3 py-1 text-[11px] font-bold text-orange-400 border border-orange-500/20">
+                    Manually verified
+                  </span>
+                )}
+              </div>
+
               {loadingPayment ? (
                 <div className="flex h-32 items-center justify-center">
                   <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-500 border-t-transparent"></div>
@@ -493,25 +502,31 @@ function RegistrationDetailsModal({
                         </p>
                       </div>
                       <div className="space-y-2">
-                        <label className="text-xs font-semibold text-slate-400">Rejection Reason (Optional)</label>
+                        <label className="text-xs font-semibold text-slate-400">Rejection Reason / Admin Note (Optional)</label>
                         <textarea
                           value={rejectionReason}
                           onChange={(e) => setRejectionReason(e.target.value)}
-                          placeholder="If rejecting, please provide a reason..."
+                          placeholder="Provide a reason for rejection or a note for approval..."
                           className="w-full rounded-xl border border-white/10 bg-slate-900 p-3 text-sm text-white focus:border-blue-500 focus:outline-none"
                           rows="3"
                         />
                       </div>
                       <div className="flex gap-3">
                         <button
-                          onClick={() => onApprove(registration)}
+                          onClick={() => {
+                            if (!paymentDetails.screenshotUrl) {
+                              setShowConfirmModal(true);
+                            } else {
+                              onApprove(registration, { adminNote: rejectionReason });
+                            }
+                          }}
                           disabled={updating}
                           className="flex-1 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-500 disabled:opacity-50"
                         >
                           Approve Payment
                         </button>
                         <button
-                          onClick={() => onReject(registration, rejectionReason)}
+                          onClick={() => onReject(registration, rejectionReason, rejectionReason)}
                           disabled={updating}
                           className="flex-1 rounded-xl bg-red-600 px-4 py-3 text-sm font-bold text-white hover:bg-red-500 disabled:opacity-50"
                         >
@@ -519,14 +534,18 @@ function RegistrationDetailsModal({
                         </button>
                       </div>
                     </div>
-                    {paymentDetails.screenshotUrl && (
-                      <div className="w-full sm:w-1/2">
-                        <p className="mb-2 text-xs font-semibold text-slate-400">Payment Screenshot</p>
+                    <div className="w-full sm:w-1/2">
+                      <p className="mb-2 text-xs font-semibold text-slate-400">Payment Screenshot</p>
+                      {paymentDetails.screenshotUrl ? (
                         <a href={paymentDetails.screenshotUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-xl border border-white/10 transition-colors hover:border-blue-500">
                           <img src={paymentDetails.screenshotUrl} alt="Payment Proof" className="w-full object-contain bg-slate-900" style={{ maxHeight: "400px" }} />
                         </a>
-                      </div>
-                    )}
+                      ) : (
+                        <div className="flex h-40 items-center justify-center rounded-xl border border-dashed border-white/10 bg-white/5">
+                          <p className="text-sm font-medium text-slate-400">Not uploaded</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -716,6 +735,41 @@ function RegistrationDetailsModal({
         </div>
 
       </div>
+
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-orange-500/30 bg-slate-900 p-6 shadow-2xl">
+            <h3 className="mb-3 text-lg font-bold text-orange-400">Manual Verification Required</h3>
+            <p className="mb-5 text-sm leading-relaxed text-slate-300">
+              Payment proof has not been uploaded.<br/><br/>
+              Have you independently verified this payment in the UPI/payment account?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowConfirmModal(false)}
+                disabled={updating}
+                className="rounded-xl border border-white/10 px-4 py-2.5 text-sm font-medium text-slate-300 hover:bg-white/5"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  onApprove(registration, {
+                    manualVerification: true,
+                    adminNote: rejectionReason || "Payment independently verified by admin; payment screenshot not uploaded."
+                  });
+                  setShowConfirmModal(false);
+                }}
+                disabled={updating}
+                className="rounded-xl bg-orange-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-orange-500 disabled:opacity-50"
+              >
+                Confirm Manual Approval
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
@@ -1133,13 +1187,14 @@ export default function RegistrationTable() {
       }
     };
 
-  const handleApproveRegistration = async (registration) => {
+  const handleApproveRegistration = async (registration, { manualVerification = false, adminNote = "" } = {}) => {
     try {
       setActionLoading(true);
       setError("");
 
       const updated = await registrationsAdminApi.approveRegistration(
-        getRegistrationId(registration)
+        getRegistrationId(registration),
+        { manualVerification, adminNote }
       );
 
       setRegistrations((current) =>
@@ -1162,14 +1217,15 @@ export default function RegistrationTable() {
     }
   };
 
-  const handleRejectRegistration = async (registration, reason) => {
+  const handleRejectRegistration = async (registration, reason, adminNote = "") => {
     try {
       setActionLoading(true);
       setError("");
 
       const updated = await registrationsAdminApi.rejectRegistration(
         getRegistrationId(registration),
-        reason
+        reason,
+        adminNote
       );
 
       setRegistrations((current) =>
