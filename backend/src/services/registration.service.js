@@ -1051,28 +1051,19 @@ const updateRegistrationStatus =
  * ============================================================
  */
 
-const sendPostApprovalEmailsInBackground = async (updatedRegistration, tickets) => {
+import emailJobRepository from "../repositories/emailJob.repository.js";
+
+const enqueuePostApprovalEmails = async (updatedRegistration, tickets) => {
   try {
     const getReferenceId = (reference) => reference?._id || reference;
-
     const user = updatedRegistration.user ? await User.findById(getReferenceId(updatedRegistration.user)).lean() : null;
     const event = await eventRepository.findByIdRaw(getReferenceId(updatedRegistration.event));
 
     if (event && tickets.length > 0) {
-      let payment = await paymentRepository.findPendingByRegistration(updatedRegistration._id);
-
-      if (!payment) {
-        payment = {
-          amount: event.registrationFee,
-          currency: event.currency || "INR",
-          paymentId: "OFFLINE / MANUAL",
-          orderId: "OFFLINE / MANUAL",
-          paidAt: new Date(),
-        };
-      }
-
       const RegistrationModel = mongoose.model("Registration");
       const fullRegistration = await RegistrationModel.findById(updatedRegistration._id).populate("team").lean();
+
+      const jobsData = [];
 
       for (const ticket of tickets) {
         let participantEmail = "";
@@ -1095,26 +1086,24 @@ const sendPostApprovalEmailsInBackground = async (updatedRegistration, tickets) 
         }
 
         if (participantEmail && ticket.qrToken) {
-          const pdfBuffer = await receiptUtil.generateRegistrationPDF({
-            payment,
-            registration: fullRegistration,
-            ticket,
-          });
-
-          await emailUtil.sendRegistrationConfirmation({
-            to: participantEmail,
-            participantName,
-            eventName: event.title,
-            ticketNumber: ticket.ticketNumber,
-            pdfBuffer,
+          jobsData.push({
+            registration: updatedRegistration._id,
+            ticket: ticket._id,
+            type: "REGISTRATION_CONFIRMATION",
+            recipientEmail: participantEmail,
+            recipientName: participantName,
           });
         }
       }
 
-      logger.info(`Registration confirmation emails sent successfully for registration ${updatedRegistration._id}.`);
+      if (jobsData.length > 0) {
+        await emailJobRepository.createConfirmationJobs(jobsData);
+        logger.info(`Successfully enqueued ${jobsData.length} registration confirmation email jobs for registration ${updatedRegistration._id}.`);
+      }
     }
   } catch (error) {
-    logger.error(`Registration confirmation email failed for registration ${updatedRegistration._id}: ${error.message}`);
+    logger.error(`Failed to enqueue confirmation emails for registration ${updatedRegistration._id}: ${error.message}`);
+    // We do not re-throw here to ensure payment status update succeeds even if queueing fails.
   }
 };
 
@@ -1199,10 +1188,8 @@ const updatePaymentStatus =
           tickets = await ticketService.createTicketsForRegistration(updatedRegistration._id);
         }
 
-        // Run post-approval PDF and SMTP work asynchronously without awaiting it
-        sendPostApprovalEmailsInBackground(updatedRegistration, tickets).catch((error) => {
-          logger.error(`Unhandled error in background email processing for registration ${updatedRegistration._id}: ${error.message}`);
-        });
+        // Enqueue email jobs synchronously (this writes to DB quickly without blocking on PDF/SMTP)
+        await enqueuePostApprovalEmails(updatedRegistration, tickets);
       } catch (error) {
         logger.error(`Ticket creation failed for registration ${updatedRegistration._id}: ${error.message}`);
       }

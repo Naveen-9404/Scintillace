@@ -109,6 +109,9 @@ const ensurePaymentOwnership = (
  * same payment.
  */
 
+import emailJobRepository from "../repositories/emailJob.repository.js";
+import mongoose from "mongoose";
+
 const sendEventRegistrationConfirmation =
   async ({
     paymentId,
@@ -128,22 +131,11 @@ const sendEventRegistrationConfirmation =
         paymentId,
       );
 
-    /**
-     * Another request has already claimed or completed
-     * the email.
-     */
-
     if (!payment) {
       return;
     }
 
     try {
-      /**
-       * --------------------------------------------------------
-       * Registration
-       * --------------------------------------------------------
-       */
-
       if (!payment.registration) {
         throw new Error(
           "Registration reference is missing.",
@@ -162,113 +154,65 @@ const sendEventRegistrationConfirmation =
         );
       }
 
-      /**
-       * --------------------------------------------------------
-       * Ticket with QR token
-       * --------------------------------------------------------
-       */
+      const tickets = await mongoose.model("Ticket").find({ registration: registration._id }).select("+qrToken").lean();
 
-      const ticket =
-        await ticketRepository.findByRegistrationWithQrToken(
-          registration._id,
-        );
-
-      if (!ticket) {
+      if (!tickets || tickets.length === 0) {
         throw new Error(
-          "Ticket could not be found for the registration.",
+          "Tickets could not be found for the registration.",
         );
       }
 
-      if (!ticket.qrToken) {
-        throw new Error(
-          "Ticket QR token could not be found.",
-        );
+      const user = registration.user;
+
+      const RegistrationModel = mongoose.model("Registration");
+      const fullRegistration = await RegistrationModel.findById(registration._id).populate("team").lean();
+
+      const jobsData = [];
+
+      for (const ticket of tickets) {
+        let participantEmail = "";
+        let participantName = "";
+
+        if (ticket.teamMemberId && fullRegistration.team && fullRegistration.team.members) {
+          const member = fullRegistration.team.members.find(m => m._id.toString() === ticket.teamMemberId.toString());
+          if (member) {
+            participantEmail = member.participantEmail;
+            participantName = member.participantName || "Team Member";
+          }
+        } else {
+          participantEmail = fullRegistration.participantEmail;
+          participantName = fullRegistration.participantName || "Participant";
+        }
+
+        if (!participantEmail && user && user.email) {
+          participantEmail = user.email;
+          participantName = user.fullName || participantName;
+        }
+
+        if (participantEmail && ticket.qrToken) {
+          jobsData.push({
+            registration: registration._id,
+            ticket: ticket._id,
+            type: "REGISTRATION_CONFIRMATION",
+            recipientEmail: participantEmail,
+            recipientName: participantName,
+          });
+        }
       }
 
-      /**
-       * --------------------------------------------------------
-       * Participant
-       * --------------------------------------------------------
-       */
-
-      const user =
-        registration.user ||
-        ticket.user;
-
-      if (!user?.email) {
-        throw new Error(
-          "Registered user's email address could not be found.",
-        );
+      if (jobsData.length > 0) {
+        await emailJobRepository.createConfirmationJobs(jobsData);
       }
-
-      /**
-       * --------------------------------------------------------
-       * Event
-       * --------------------------------------------------------
-       */
-
-      const event =
-        registration.event ||
-        ticket.event;
-
-      /**
-       * --------------------------------------------------------
-       * Generate PDF
-       * --------------------------------------------------------
-       */
-
-      const pdf =
-        await receiptUtil.generateRegistrationPDF(
-          {
-            payment,
-            registration,
-            ticket,
-          },
-        );
-
-      /**
-       * --------------------------------------------------------
-       * Send Email
-       * --------------------------------------------------------
-       */
-
-      const emailResult =
-        await emailUtil.sendRegistrationConfirmation(
-          {
-            to:
-              user.email,
-
-            participantName:
-              user.fullName,
-
-            eventName:
-              event?.title,
-
-            ticketNumber:
-              ticket.ticketNumber,
-
-            pdfBuffer:
-              pdf,
-          },
-        );
-
-      /**
-       * --------------------------------------------------------
-       * Mark email as successfully sent
-       * --------------------------------------------------------
-       */
 
       await paymentRepository.markConfirmationEmailSent(
         paymentId,
         {
-          messageId:
-            emailResult?.messageId ||
-            null,
+          messageId: "ENQUEUED",
         },
       );
 
       logger.info(
-        `Registration confirmation email sent successfully for payment ${payment.orderId}.`,
+        `Registration confirmation email jobs enqueued successfully for payment ${payment.orderId}.`,
       );
     } catch (error) {
       /**

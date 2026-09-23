@@ -2,6 +2,7 @@ import app from './app.js';
 import { initializeDatabase, closeDatabase } from './config/database.js';
 import config from './config/index.js';
 import logger from './config/logger.js';
+import emailWorker from './workers/email.worker.js';
 
 const startServer = async () => {
   try {
@@ -11,6 +12,9 @@ const startServer = async () => {
       logger.info(
         `Scintillace backend running on http://localhost:${config.env.port}`,
       );
+
+      // Start background workers
+      emailWorker.start(10000); // Poll every 10 seconds
     });
 
     server.on('error', (error) => {
@@ -27,6 +31,7 @@ const startServer = async () => {
       logger.info(`Received ${signal}. Shutting down gracefully...`);
       server.close(async () => {
         logger.info('HTTP server closed.');
+        emailWorker.stop();
         await closeDatabase();
         process.exit(0);
       });
