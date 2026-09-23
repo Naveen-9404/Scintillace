@@ -136,6 +136,7 @@ const getDisplayName = (
 ) =>
   registration?.user
     ?.fullName ||
+  registration?.participantName ||
   "Unknown participant";
 
 const getEventTitle = (
@@ -331,22 +332,26 @@ function RegistrationDetailsModal({
                 [
                   "Name",
                   registration.user
-                    ?.fullName,
+                    ?.fullName ||
+                  registration.participantName,
                 ],
                 [
                   "Email",
                   registration.user
-                    ?.email,
+                    ?.email ||
+                  registration.participantEmail,
                 ],
                 [
                   "Phone",
                   registration.user
-                    ?.phone,
+                    ?.phone ||
+                  registration.participantPhone,
                 ],
                 [
                   "College ID",
                   registration.user
-                    ?.collegeId,
+                    ?.collegeId ||
+                  registration.collegeId,
                 ],
               ]}
             />
@@ -894,11 +899,13 @@ export default function RegistrationTable() {
           const name =
             registration.user
               ?.fullName ||
+            registration.participantName ||
             "";
 
           const email =
             registration.user
               ?.email ||
+            registration.participantEmail ||
             "";
 
           const event =
