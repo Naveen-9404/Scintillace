@@ -476,9 +476,9 @@ function RegistrationDetailsModal({
             <div className="mt-6 rounded-2xl border border-blue-500/20 bg-blue-500/5 p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-bold text-blue-300">Admin Payment Verification</h3>
-                {paymentDetails?.manualVerification && (
+                {(!paymentDetails || paymentDetails?.manualVerification) && (
                   <span className="rounded-full bg-orange-500/20 px-3 py-1 text-[11px] font-bold text-orange-400 border border-orange-500/20">
-                    Manually verified
+                    {paymentDetails?.manualVerification ? "Manually verified" : "Requires Manual Verification"}
                   </span>
                 )}
               </div>
@@ -487,18 +487,20 @@ function RegistrationDetailsModal({
                 <div className="flex h-32 items-center justify-center">
                   <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-500 border-t-transparent"></div>
                 </div>
-              ) : paymentDetails ? (
+              ) : (
                 <div className="space-y-6">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
                     <div className="flex-1 space-y-4">
-                      <div className="rounded-xl bg-slate-900/50 p-4">
-                        <p className="text-xs text-slate-500">Payment ID</p>
-                        <p className="font-mono text-sm text-slate-300">{paymentDetails._id}</p>
-                      </div>
+                      {paymentDetails?._id && (
+                        <div className="rounded-xl bg-slate-900/50 p-4">
+                          <p className="text-xs text-slate-500">Payment ID</p>
+                          <p className="font-mono text-sm text-slate-300">{paymentDetails._id}</p>
+                        </div>
+                      )}
                       <div className="rounded-xl bg-slate-900/50 p-4">
                         <p className="text-xs text-slate-500">Amount to Verify</p>
                         <p className="text-lg font-bold text-emerald-400">
-                          {paymentDetails.amount} {paymentDetails.currency}
+                          {paymentDetails?.amount ? `${paymentDetails.amount} ${paymentDetails.currency}` : "Manual Verification"}
                         </p>
                       </div>
                       <div className="space-y-2">
@@ -514,7 +516,7 @@ function RegistrationDetailsModal({
                       <div className="flex gap-3">
                         <button
                           onClick={() => {
-                            if (!paymentDetails.screenshotUrl) {
+                            if (!paymentDetails?.screenshotUrl) {
                               setShowConfirmModal(true);
                             } else {
                               onApprove(registration, { adminNote: rejectionReason });
@@ -536,7 +538,7 @@ function RegistrationDetailsModal({
                     </div>
                     <div className="w-full sm:w-1/2">
                       <p className="mb-2 text-xs font-semibold text-slate-400">Payment Screenshot</p>
-                      {paymentDetails.screenshotUrl ? (
+                      {paymentDetails?.screenshotUrl ? (
                         <a href={paymentDetails.screenshotUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-xl border border-white/10 transition-colors hover:border-blue-500">
                           <img src={paymentDetails.screenshotUrl} alt="Payment Proof" className="w-full object-contain bg-slate-900" style={{ maxHeight: "400px" }} />
                         </a>
@@ -548,8 +550,6 @@ function RegistrationDetailsModal({
                     </div>
                   </div>
                 </div>
-              ) : (
-                <p className="text-sm text-slate-400">No pending payment details found.</p>
               )}
             </div>
           )}
