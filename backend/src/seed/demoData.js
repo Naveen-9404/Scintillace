@@ -150,6 +150,7 @@ export const demoEvents = [
 requirements: [],
 
 rules: [
+  "Registration fee is ₹600.",
   "Participants must carry their college ID card.",
   "Maintain discipline and follow the instructions of organizers.",
   "No hardware/components will be provided by organizers.",
@@ -257,8 +258,7 @@ registrationOpen: true,
       "A maximum of two participants are allowed per paper.",
       "The paper must be submitted in IEEE format.",
       "The maximum number of papers that can be submitted is six.",
-      "The last date for paper submission is 23 September 2026.",
-      "Registration fee is ₹200 per team.",
+      "Registration fee is ₹200.",
     ],
 
     speaker: {
@@ -361,14 +361,11 @@ registrationOpen: true,
       ...PRESENTATION_TOPICS,
     ],
 
-    requirements: [
-      "Poster must be submitted by 23 September 2026.",
-    ],
+    requirements: [],
 
     rules: [
       "A maximum of two participants are allowed per poster.",
-      "The last date for poster submission is 23 September 2026.",
-      "Registration fee is ₹200 per team.",
+      "Registration fee is ₹200.",
     ],
 
     speaker: {
@@ -476,7 +473,7 @@ registrationOpen: true,
 
     rules: [
       "A maximum of three participants are allowed per project presentation.",
-      "Registration fee is ₹300 per team.",
+      "Registration fee is ₹300.",
     ],
 
     speaker: {
