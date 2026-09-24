@@ -2,6 +2,7 @@ import {
   CalendarDays,
   UserRound,
   Award,
+  BedDouble,
   Ticket,
   ArrowRight,
 } from "lucide-react";
@@ -50,6 +51,15 @@ const actions = [
     icon: Award,
     to: "/certificates",
     accent: "amber",
+  },
+
+  {
+    title: "Accommodation",
+    description:
+      "View accommodation rules and information.",
+    icon: BedDouble,
+    to: "/accommodation",
+    accent: "emerald",
   },
 ];
 
