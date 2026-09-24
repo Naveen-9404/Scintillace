@@ -79,10 +79,6 @@ export default function Navbar() {
   const isHomePage =
     location.pathname === "/";
 
-  const isAccommodationPage =
-    location.pathname ===
-    "/accommodation";
-
   const isContactPage =
     location.pathname ===
     "/contact";
@@ -280,29 +276,6 @@ export default function Navbar() {
             </Link>
 
             {/* =================================================
-                ACCOMMODATION
-                ================================================= */}
-
-            <Link
-              to="/accommodation"
-              className={`group relative text-sm font-semibold transition-all duration-300 ${
-                isAccommodationPage
-                  ? "text-cyan-400"
-                  : "text-slate-300 hover:text-cyan-300"
-              }`}
-            >
-              Accommodation
-
-              <span
-                className={`absolute -bottom-2 left-0 h-[2px] bg-cyan-400 transition-all duration-300 ${
-                  isAccommodationPage
-                    ? "w-full"
-                    : "w-0 group-hover:w-full"
-                }`}
-              />
-            </Link>
-
-            {/* =================================================
                 CONTACT
                 ================================================= */}
 
@@ -412,12 +385,6 @@ export default function Navbar() {
           {
             name: "Announcements",
             id: "/announcements",
-            type: "route",
-          },
-
-          {
-            name: "Accommodation",
-            id: "/accommodation",
             type: "route",
           },
 

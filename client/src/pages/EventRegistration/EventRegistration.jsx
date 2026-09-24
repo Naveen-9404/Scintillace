@@ -471,12 +471,6 @@ export default function EventRegistration() {
 
           <div className="mt-12 pt-8 border-t border-zinc-800 flex justify-center gap-4">
             <button
-              onClick={() => setRegistrationStep("accommodation")}
-              className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-6 py-3 font-semibold text-white transition hover:bg-violet-700"
-            >
-              Book Accommodation
-            </button>
-            <button
               onClick={() => navigate(`/events/${eventId}`)}
               className="inline-flex items-center gap-2 rounded-xl bg-zinc-800 px-6 py-3 font-semibold text-white transition hover:bg-zinc-700"
             >
@@ -836,12 +830,6 @@ export default function EventRegistration() {
                     className="w-full sm:w-2/3 rounded-xl bg-violet-600 py-4 font-bold text-white transition hover:bg-violet-700 disabled:opacity-50"
                   >
                     {processing ? "Submitting Payment..." : "Submit Payment Proof"}
-                  </button>
-                  <button
-                    onClick={() => setRegistrationStep("accommodation")}
-                    className="w-full sm:w-1/3 rounded-xl bg-zinc-800 py-4 font-bold text-white transition hover:bg-zinc-700"
-                  >
-                    Book Accommodation
                   </button>
                 </div>
               </div>

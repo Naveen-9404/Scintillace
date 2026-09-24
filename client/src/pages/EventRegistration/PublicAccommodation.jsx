@@ -68,14 +68,6 @@ export default function PublicAccommodation({ registeredData, guestToken, onBack
     ? new Date(new Date(checkInDate).getTime() + 86400000).toISOString().split("T")[0] 
     : todayStr;
 
-  const handleBookClick = (member) => {
-    setBookingMember(member || "INDIVIDUAL");
-    setHostelType("");
-    setCheckInDate("");
-    setCheckOutDate("");
-    setPaymentScreenshot(null);
-    setError("");
-  };
 
   const handleCancelBooking = () => {
     setBookingMember(null);
@@ -310,12 +302,7 @@ export default function PublicAccommodation({ registeredData, guestToken, onBack
                   <span className="text-xs text-zinc-500">Hostel: {getIndividualBooking().hostelType}</span>
                 </div>
               ) : (
-                <button
-                  onClick={() => handleBookClick(null)}
-                  className="rounded-xl bg-violet-600/10 px-5 py-2 font-semibold text-violet-400 transition hover:bg-violet-600 hover:text-white border border-violet-500/20"
-                >
-                  Book Accommodation
-                </button>
+                <span className="text-sm text-zinc-500">Booking unavailable</span>
               )}
             </div>
           </div>
@@ -340,12 +327,7 @@ export default function PublicAccommodation({ registeredData, guestToken, onBack
                     <span className="text-xs text-zinc-500">Hostel: {booking.hostelType}</span>
                   </div>
                 ) : (
-                  <button
-                    onClick={() => handleBookClick(member)}
-                    className="rounded-xl bg-violet-600/10 px-5 py-2 font-semibold text-violet-400 transition hover:bg-violet-600 hover:text-white border border-violet-500/20"
-                  >
-                    Book Accommodation
-                  </button>
+                  <span className="text-sm text-zinc-500">Booking unavailable</span>
                 )}
               </div>
             </div>
