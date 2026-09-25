@@ -20,61 +20,30 @@ import ROLES from "../constants/roles.js";
 /**
  * Validate MongoDB ObjectId.
  */
-const validateObjectId = (
-  value,
-  label,
-) => {
-  if (
-    !mongoose.Types.ObjectId.isValid(
-      value,
-    )
-  ) {
-    throw new ApiError(
-      HTTP_STATUS.BAD_REQUEST,
-      `Invalid ${label}.`,
-    );
+const validateObjectId = (value, label) => {
+  if (!mongoose.Types.ObjectId.isValid(value)) {
+    throw new ApiError(HTTP_STATUS.BAD_REQUEST, `Invalid ${label}.`);
   }
 };
 
 /**
  * Normalize pagination.
  */
-const normalizePagination = ({
-  page = 1,
-  limit = 10,
-} = {}) => ({
-  page: Math.max(
-    1,
-    Number(page) || 1,
-  ),
+const normalizePagination = ({ page = 1, limit = 10 } = {}) => ({
+  page: Math.max(1, Number(page) || 1),
 
-  limit: Math.min(
-    100,
-    Math.max(
-      1,
-      Number(limit) || 10,
-    ),
-  ),
+  limit: Math.min(100, Math.max(1, Number(limit) || 10)),
 });
 
 /**
  * Build pagination response.
  */
-const buildPagination = ({
-  page,
-  limit,
-  total,
-}) => ({
+const buildPagination = ({ page, limit, total }) => ({
   page,
   limit,
   total,
 
-  totalPages:
-    total === 0
-      ? 0
-      : Math.ceil(
-          total / limit,
-        ),
+  totalPages: total === 0 ? 0 : Math.ceil(total / limit),
 });
 
 /**
@@ -83,21 +52,13 @@ const buildPagination = ({
  * ============================================================
  */
 
-const generateTicketNumber =
-  () => {
-    const timestamp =
-      Date.now()
-        .toString(36)
-        .toUpperCase();
+const generateTicketNumber = () => {
+  const timestamp = Date.now().toString(36).toUpperCase();
 
-    const random =
-      crypto
-        .randomBytes(4)
-        .toString("hex")
-        .toUpperCase();
+  const random = crypto.randomBytes(4).toString("hex").toUpperCase();
 
-    return `FS-TKT-${timestamp}-${random}`;
-  };
+  return `FS-TKT-${timestamp}-${random}`;
+};
 
 /**
  * ============================================================
@@ -105,10 +66,9 @@ const generateTicketNumber =
  * ============================================================
  */
 
-const generateQrToken =
-  () => {
-    return qrService.generateTicketToken();
-  };
+const generateQrToken = () => {
+  return qrService.generateTicketToken();
+};
 
 /**
  * ============================================================
@@ -127,22 +87,13 @@ const generateQrToken =
  * ============================================================
  */
 
-const isTicketOwnerOrAdmin = (
-  ticket,
-  requesterId,
-  requesterRole,
-) => {
-  const ticketUserId =
-    ticket.user?._id ||
-    ticket.user;
+const isTicketOwnerOrAdmin = (ticket, requesterId, requesterRole) => {
+  const ticketUserId = ticket.user?._id || ticket.user;
 
   return (
-    ticketUserId?.toString() ===
-      requesterId.toString() ||
-    requesterRole ===
-      ROLES.SUPER_ADMIN ||
-    requesterRole ===
-      ROLES.FACULTY
+    ticketUserId?.toString() === requesterId.toString() ||
+    requesterRole === ROLES.SUPER_ADMIN ||
+    requesterRole === ROLES.FACULTY
   );
 };
 
@@ -155,47 +106,22 @@ const isTicketOwnerOrAdmin = (
  * workflow.
  */
 
-const createTicket = async (
-  ticketData,
-  generatedBy = null,
-  session = null,
-) => {
-  const {
-    registration,
-    user,
-    event,
-    festival,
-    teamMemberId,
-  } = ticketData;
+const createTicket = async (ticketData, generatedBy = null, session = null) => {
+  const { registration, user, event, festival, teamMemberId } = ticketData;
 
-  validateObjectId(
-    registration,
-    "Registration ID",
-  );
+  validateObjectId(registration, "Registration ID");
 
   if (user) {
-    validateObjectId(
-      user,
-      "User ID",
-    );
+    validateObjectId(user, "User ID");
   }
 
   if (teamMemberId) {
-    validateObjectId(
-      teamMemberId,
-      "Team Member ID",
-    );
+    validateObjectId(teamMemberId, "Team Member ID");
   }
 
-  validateObjectId(
-    event,
-    "Event ID",
-  );
+  validateObjectId(event, "Event ID");
 
-  validateObjectId(
-    festival,
-    "Festival ID",
-  );
+  validateObjectId(festival, "Festival ID");
 
   /**
    * Prevent duplicate ticket generation for the
@@ -215,11 +141,9 @@ const createTicket = async (
     );
   }
 
-  const ticketNumber =
-    generateTicketNumber();
+  const ticketNumber = generateTicketNumber();
 
-  const qrToken =
-    generateQrToken();
+  const qrToken = generateQrToken();
 
   return ticketRepository.create(
     {
@@ -231,18 +155,12 @@ const createTicket = async (
 
       generatedBy,
 
-      generatedAt:
-        ticketData.generatedAt ||
-        new Date(),
+      generatedAt: ticketData.generatedAt || new Date(),
 
-      status:
-        ticketData.status ||
-        "ACTIVE",
+      status: ticketData.status || "ACTIVE",
     },
 
-    session
-      ? { session }
-      : {},
+    session ? { session } : {},
   );
 };
 
@@ -252,9 +170,16 @@ const createTicket = async (
  * ============================================================
  */
 
-const createTicketsForRegistration = async (registrationId, generatedBy = null, session = null) => {
+const createTicketsForRegistration = async (
+  registrationId,
+  generatedBy = null,
+  session = null,
+) => {
   const Registration = mongoose.model("Registration");
-  const registration = await Registration.findById(registrationId).populate("team").lean().exec();
+  const registration = await Registration.findById(registrationId)
+    .populate("team")
+    .lean()
+    .exec();
 
   if (!registration) {
     throw new ApiError(HTTP_STATUS.NOT_FOUND, "Registration not found.");
@@ -273,18 +198,26 @@ const createTicketsForRegistration = async (registrationId, generatedBy = null, 
 
   const processTicket = async (teamMemberId) => {
     try {
-      const ticket = await createTicket({
-        ...baseTicketData,
-        teamMemberId,
-      }, generatedBy, session);
+      const ticket = await createTicket(
+        {
+          ...baseTicketData,
+          teamMemberId,
+        },
+        generatedBy,
+        session,
+      );
       return ticket;
     } catch (error) {
-      if ((error.statusCode === HTTP_STATUS.CONFLICT) || (error.code === 11000)) {
-        const existingTicket = await mongoose.model("Ticket").findOne({
-          registration: baseTicketData.registration,
-          teamMemberId: teamMemberId || null,
-        }).session(session || null);
-        
+      if (error.statusCode === HTTP_STATUS.CONFLICT || error.code === 11000) {
+        const existingTicket = await mongoose
+          .model("Ticket")
+          .findOne({
+            registration: baseTicketData.registration,
+            teamMemberId: teamMemberId || null,
+          })
+          .select("+qrToken")
+          .session(session || null);
+
         if (existingTicket) {
           // Flag it so consumers know it's not a brand new ticket (e.g. to avoid duplicate emails)
           existingTicket._isRecovered = true;
@@ -295,7 +228,11 @@ const createTicketsForRegistration = async (registrationId, generatedBy = null, 
     }
   };
 
-  if (registration.team && registration.team.members && registration.team.members.length > 0) {
+  if (
+    registration.team &&
+    registration.team.members &&
+    registration.team.members.length > 0
+  ) {
     for (const member of registration.team.members) {
       const ticket = await processTicket(member._id);
       tickets.push(ticket);
@@ -314,24 +251,13 @@ const createTicketsForRegistration = async (registrationId, generatedBy = null, 
  * ============================================================
  */
 
-const getTicketById = async (
-  ticketId,
-) => {
-  validateObjectId(
-    ticketId,
-    "Ticket ID",
-  );
+const getTicketById = async (ticketId) => {
+  validateObjectId(ticketId, "Ticket ID");
 
-  const ticket =
-    await ticketRepository.findById(
-      ticketId,
-    );
+  const ticket = await ticketRepository.findById(ticketId);
 
   if (!ticket) {
-    throw new ApiError(
-      HTTP_STATUS.NOT_FOUND,
-      "Ticket not found.",
-    );
+    throw new ApiError(HTTP_STATUS.NOT_FOUND, "Ticket not found.");
   }
 
   return ticket;
@@ -343,37 +269,21 @@ const getTicketById = async (
  * ============================================================
  */
 
-const getTicketByNumber =
-  async (
-    ticketNumber,
-  ) => {
-    if (
-      typeof ticketNumber !==
-        "string" ||
-      !ticketNumber.trim()
-    ) {
-      throw new ApiError(
-        HTTP_STATUS.BAD_REQUEST,
-        "Ticket number is required.",
-      );
-    }
+const getTicketByNumber = async (ticketNumber) => {
+  if (typeof ticketNumber !== "string" || !ticketNumber.trim()) {
+    throw new ApiError(HTTP_STATUS.BAD_REQUEST, "Ticket number is required.");
+  }
 
-    const ticket =
-      await ticketRepository.findByTicketNumber(
-        ticketNumber
-          .trim()
-          .toUpperCase(),
-      );
+  const ticket = await ticketRepository.findByTicketNumber(
+    ticketNumber.trim().toUpperCase(),
+  );
 
-    if (!ticket) {
-      throw new ApiError(
-        HTTP_STATUS.NOT_FOUND,
-        "Ticket not found.",
-      );
-    }
+  if (!ticket) {
+    throw new ApiError(HTTP_STATUS.NOT_FOUND, "Ticket not found.");
+  }
 
-    return ticket;
-  };
+  return ticket;
+};
 
 /**
  * ============================================================
@@ -381,23 +291,10 @@ const getTicketByNumber =
  * ============================================================
  */
 
-const getTicketQR = async (
-  ticketId,
-  requesterId,
-  requesterRole,
-) => {
-  const ticket =
-    await getTicketById(
-      ticketId,
-    );
+const getTicketQR = async (ticketId, requesterId, requesterRole) => {
+  const ticket = await getTicketById(ticketId);
 
-  if (
-    !isTicketOwnerOrAdmin(
-      ticket,
-      requesterId,
-      requesterRole,
-    )
-  ) {
+  if (!isTicketOwnerOrAdmin(ticket, requesterId, requesterRole)) {
     throw new ApiError(
       "You are not authorized to access this ticket QR code.",
       HTTP_STATUS.FORBIDDEN,
@@ -405,25 +302,16 @@ const getTicketQR = async (
   }
 
   const ticketWithQrToken =
-    await ticketRepository.findByTicketNumberWithQrToken(
-      ticket.ticketNumber,
-    );
+    await ticketRepository.findByTicketNumberWithQrToken(ticket.ticketNumber);
 
   if (!ticketWithQrToken) {
-    throw new ApiError(
-      "Ticket not found.",
-      HTTP_STATUS.NOT_FOUND,
-    );
+    throw new ApiError("Ticket not found.", HTTP_STATUS.NOT_FOUND);
   }
 
-  const { qrCode } =
-    await qrService.generateTicketQR(
-      ticketWithQrToken,
-    );
+  const { qrCode } = await qrService.generateTicketQR(ticketWithQrToken);
 
   return {
-    ticketNumber:
-      ticketWithQrToken.ticketNumber,
+    ticketNumber: ticketWithQrToken.ticketNumber,
 
     qrCode,
   };
@@ -441,23 +329,12 @@ const getTicketQR = async (
  * Check-in remains a separate operation.
  */
 
-const verifyQrToken = async (
-  qrPayload,
-) => {
-  if (
-    qrPayload === undefined ||
-    qrPayload === null ||
-    qrPayload === ""
-  ) {
-    throw new ApiError(
-      HTTP_STATUS.BAD_REQUEST,
-      "QR payload is required.",
-    );
+const verifyQrToken = async (qrPayload) => {
+  if (qrPayload === undefined || qrPayload === null || qrPayload === "") {
+    throw new ApiError(HTTP_STATUS.BAD_REQUEST, "QR payload is required.");
   }
 
-  return qrService.verifyTicketQR(
-    qrPayload,
-  );
+  return qrService.verifyTicketQR(qrPayload);
 };
 
 /**
@@ -466,46 +343,27 @@ const verifyQrToken = async (
  * ============================================================
  */
 
-const getMyTickets = async (
-  userId,
-  {
-    page = 1,
-    limit = 10,
-  } = {},
-) => {
-  validateObjectId(
-    userId,
-    "User ID",
-  );
+const getMyTickets = async (userId, { page = 1, limit = 10 } = {}) => {
+  validateObjectId(userId, "User ID");
 
-  const pagination =
-    normalizePagination({
-      page,
-      limit,
-    });
+  const pagination = normalizePagination({
+    page,
+    limit,
+  });
 
-  const [
-    tickets,
-    total,
-  ] = await Promise.all([
-    ticketRepository.getByUser(
-      userId,
-      pagination,
-    ),
+  const [tickets, total] = await Promise.all([
+    ticketRepository.getByUser(userId, pagination),
 
-    ticketRepository.countByUser(
-      userId,
-    ),
+    ticketRepository.countByUser(userId),
   ]);
 
   return {
     tickets,
 
-    pagination:
-      buildPagination({
-        ...pagination,
-        total,
-      }),
+    pagination: buildPagination({
+      ...pagination,
+      total,
+    }),
   };
 };
 
@@ -515,39 +373,28 @@ const getMyTickets = async (
  * ============================================================
  */
 
-const getAllTickets = async ({
-  filter = {},
-  page = 1,
-  limit = 10,
-} = {}) => {
-  const pagination =
-    normalizePagination({
-      page,
-      limit,
-    });
+const getAllTickets = async ({ filter = {}, page = 1, limit = 10 } = {}) => {
+  const pagination = normalizePagination({
+    page,
+    limit,
+  });
 
-  const [
-    tickets,
-    total,
-  ] = await Promise.all([
+  const [tickets, total] = await Promise.all([
     ticketRepository.findAll({
       filter,
       ...pagination,
     }),
 
-    ticketRepository.count(
-      filter,
-    ),
+    ticketRepository.count(filter),
   ]);
 
   return {
     tickets,
 
-    pagination:
-      buildPagination({
-        ...pagination,
-        total,
-      }),
+    pagination: buildPagination({
+      ...pagination,
+      total,
+    }),
   };
 };
 
@@ -557,49 +404,29 @@ const getAllTickets = async ({
  * ============================================================
  */
 
-const getTicketsByEvent =
-  async (
-    eventId,
-    {
-      page = 1,
-      limit = 10,
-    } = {},
-  ) => {
-    validateObjectId(
-      eventId,
-      "Event ID",
-    );
+const getTicketsByEvent = async (eventId, { page = 1, limit = 10 } = {}) => {
+  validateObjectId(eventId, "Event ID");
 
-    const pagination =
-      normalizePagination({
-        page,
-        limit,
-      });
+  const pagination = normalizePagination({
+    page,
+    limit,
+  });
 
-    const [
-      tickets,
+  const [tickets, total] = await Promise.all([
+    ticketRepository.getByEvent(eventId, pagination),
+
+    ticketRepository.countByEvent(eventId),
+  ]);
+
+  return {
+    tickets,
+
+    pagination: buildPagination({
+      ...pagination,
       total,
-    ] = await Promise.all([
-      ticketRepository.getByEvent(
-        eventId,
-        pagination,
-      ),
-
-      ticketRepository.countByEvent(
-        eventId,
-      ),
-    ]);
-
-    return {
-      tickets,
-
-      pagination:
-        buildPagination({
-          ...pagination,
-          total,
-        }),
-    };
+    }),
   };
+};
 
 /**
  * ============================================================
@@ -607,49 +434,32 @@ const getTicketsByEvent =
  * ============================================================
  */
 
-const getTicketsByFestival =
-  async (
-    festivalId,
-    {
-      page = 1,
-      limit = 10,
-    } = {},
-  ) => {
-    validateObjectId(
-      festivalId,
-      "Festival ID",
-    );
+const getTicketsByFestival = async (
+  festivalId,
+  { page = 1, limit = 10 } = {},
+) => {
+  validateObjectId(festivalId, "Festival ID");
 
-    const pagination =
-      normalizePagination({
-        page,
-        limit,
-      });
+  const pagination = normalizePagination({
+    page,
+    limit,
+  });
 
-    const [
-      tickets,
+  const [tickets, total] = await Promise.all([
+    ticketRepository.getByFestival(festivalId, pagination),
+
+    ticketRepository.countByFestival(festivalId),
+  ]);
+
+  return {
+    tickets,
+
+    pagination: buildPagination({
+      ...pagination,
       total,
-    ] = await Promise.all([
-      ticketRepository.getByFestival(
-        festivalId,
-        pagination,
-      ),
-
-      ticketRepository.countByFestival(
-        festivalId,
-      ),
-    ]);
-
-    return {
-      tickets,
-
-      pagination:
-        buildPagination({
-          ...pagination,
-          total,
-        }),
-    };
+    }),
   };
+};
 
 /**
  * ============================================================
@@ -675,21 +485,14 @@ const getTicketsByFestival =
  *     the volunteer has an ACTIVE assignment.
  */
 
-const checkInTicket = async (
-  ticketId,
-  checkedInBy,
-  checkedInByRole,
-) => {
+const checkInTicket = async (ticketId, checkedInBy, checkedInByRole) => {
   /**
    * ==========================================================
    * Validate Ticket ID
    * ==========================================================
    */
 
-  validateObjectId(
-    ticketId,
-    "Ticket ID",
-  );
+  validateObjectId(ticketId, "Ticket ID");
 
   /**
    * ==========================================================
@@ -697,10 +500,7 @@ const checkInTicket = async (
    * ==========================================================
    */
 
-  validateObjectId(
-    checkedInBy,
-    "User ID",
-  );
+  validateObjectId(checkedInBy, "User ID");
 
   /**
    * ==========================================================
@@ -708,16 +508,10 @@ const checkInTicket = async (
    * ==========================================================
    */
 
-  const existing =
-    await ticketRepository.findByIdRaw(
-      ticketId,
-    );
+  const existing = await ticketRepository.findByIdRaw(ticketId);
 
   if (!existing) {
-    throw new ApiError(
-      HTTP_STATUS.NOT_FOUND,
-      "Ticket not found.",
-    );
+    throw new ApiError(HTTP_STATUS.NOT_FOUND, "Ticket not found.");
   }
 
   /**
@@ -749,16 +543,12 @@ const checkInTicket = async (
    *   for this specific event.
    */
 
-  if (
-    checkedInByRole ===
-    ROLES.VOLUNTEER
-  ) {
-    const assignment =
-      await Volunteer.findOne({
-        user: checkedInBy,
-        event: existing.event,
-        status: "ACTIVE",
-      }).lean();
+  if (checkedInByRole === ROLES.VOLUNTEER) {
+    const assignment = await Volunteer.findOne({
+      user: checkedInBy,
+      event: existing.event,
+      status: "ACTIVE",
+    }).lean();
 
     if (!assignment) {
       throw new ApiError(
@@ -768,18 +558,13 @@ const checkInTicket = async (
     }
   }
 
-
-
   /**
    * ==========================================================
    * Expired Ticket
    * ==========================================================
    */
 
-  if (
-    existing.status ===
-    "EXPIRED"
-  ) {
+  if (existing.status === "EXPIRED") {
     throw new ApiError(
       HTTP_STATUS.BAD_REQUEST,
       "Expired tickets cannot be checked in.",
@@ -792,16 +577,8 @@ const checkInTicket = async (
    * ==========================================================
    */
 
-  if (
-    existing.expiresAt &&
-    new Date(
-      existing.expiresAt,
-    ) <= new Date()
-  ) {
-    throw new ApiError(
-      HTTP_STATUS.BAD_REQUEST,
-      "This ticket has expired.",
-    );
+  if (existing.expiresAt && new Date(existing.expiresAt) <= new Date()) {
+    throw new ApiError(HTTP_STATUS.BAD_REQUEST, "This ticket has expired.");
   }
 
   /**
@@ -810,9 +587,7 @@ const checkInTicket = async (
    * ==========================================================
    */
 
-  if (
-    existing.checkedIn
-  ) {
+  if (existing.checkedIn) {
     throw new ApiError(
       HTTP_STATUS.CONFLICT,
       "This ticket has already been checked in.",
@@ -825,19 +600,15 @@ const checkInTicket = async (
    * ==========================================================
    */
 
-  return ticketRepository.updateById(
-    ticketId,
-    {
-      checkedIn: true,
+  return ticketRepository.updateById(ticketId, {
+    checkedIn: true,
 
-      checkedInAt:
-        new Date(),
+    checkedInAt: new Date(),
 
-      checkedInBy,
+    checkedInBy,
 
-      status: "USED",
-    },
-  );
+    status: "USED",
+  });
 };
 
 /**
@@ -846,42 +617,25 @@ const checkInTicket = async (
  * ============================================================
  */
 
-const expireTicket = async (
-  ticketId,
-) => {
-  validateObjectId(
-    ticketId,
-    "Ticket ID",
-  );
+const expireTicket = async (ticketId) => {
+  validateObjectId(ticketId, "Ticket ID");
 
-  const existing =
-    await ticketRepository.findByIdRaw(
-      ticketId,
-    );
+  const existing = await ticketRepository.findByIdRaw(ticketId);
 
   if (!existing) {
-    throw new ApiError(
-      HTTP_STATUS.NOT_FOUND,
-      "Ticket not found.",
-    );
+    throw new ApiError(HTTP_STATUS.NOT_FOUND, "Ticket not found.");
   }
 
-  if (
-    existing.status !==
-    "ACTIVE"
-  ) {
+  if (existing.status !== "ACTIVE") {
     throw new ApiError(
       HTTP_STATUS.BAD_REQUEST,
       "Only active tickets can be expired.",
     );
   }
 
-  return ticketRepository.updateById(
-    ticketId,
-    {
-      status: "EXPIRED",
-    },
-  );
+  return ticketRepository.updateById(ticketId, {
+    status: "EXPIRED",
+  });
 };
 
 /**
@@ -890,49 +644,29 @@ const expireTicket = async (
  * ============================================================
  */
 
-const getCheckedInTickets =
-  async (
-    eventId,
-    {
-      page = 1,
-      limit = 10,
-    } = {},
-  ) => {
-    validateObjectId(
-      eventId,
-      "Event ID",
-    );
+const getCheckedInTickets = async (eventId, { page = 1, limit = 10 } = {}) => {
+  validateObjectId(eventId, "Event ID");
 
-    const pagination =
-      normalizePagination({
-        page,
-        limit,
-      });
+  const pagination = normalizePagination({
+    page,
+    limit,
+  });
 
-    const [
-      tickets,
+  const [tickets, total] = await Promise.all([
+    ticketRepository.getCheckedInByEvent(eventId, pagination),
+
+    ticketRepository.countCheckedInByEvent(eventId),
+  ]);
+
+  return {
+    tickets,
+
+    pagination: buildPagination({
+      ...pagination,
       total,
-    ] = await Promise.all([
-      ticketRepository.getCheckedInByEvent(
-        eventId,
-        pagination,
-      ),
-
-      ticketRepository.countCheckedInByEvent(
-        eventId,
-      ),
-    ]);
-
-    return {
-      tickets,
-
-      pagination:
-        buildPagination({
-          ...pagination,
-          total,
-        }),
-    };
+    }),
   };
+};
 
 /**
  * ============================================================
@@ -940,33 +674,19 @@ const getCheckedInTickets =
  * ============================================================
  */
 
-const deleteTicket = async (
-  ticketId,
-) => {
-  validateObjectId(
-    ticketId,
-    "Ticket ID",
-  );
+const deleteTicket = async (ticketId) => {
+  validateObjectId(ticketId, "Ticket ID");
 
-  const existing =
-    await ticketRepository.findByIdRaw(
-      ticketId,
-    );
+  const existing = await ticketRepository.findByIdRaw(ticketId);
 
   if (!existing) {
-    throw new ApiError(
-      HTTP_STATUS.NOT_FOUND,
-      "Ticket not found.",
-    );
+    throw new ApiError(HTTP_STATUS.NOT_FOUND, "Ticket not found.");
   }
 
-  await ticketRepository.deleteById(
-    ticketId,
-  );
+  await ticketRepository.deleteById(ticketId);
 
   return {
-    message:
-      "Ticket deleted successfully.",
+    message: "Ticket deleted successfully.",
   };
 };
 
@@ -976,28 +696,27 @@ const deleteTicket = async (
  * ============================================================
  */
 
-const ticketService =
-  Object.freeze({
-    createTicket,
-    createTicketsForRegistration,
+const ticketService = Object.freeze({
+  createTicket,
+  createTicketsForRegistration,
 
-    getTicketById,
-    getTicketByNumber,
-    getTicketQR,
-    verifyQrToken,
+  getTicketById,
+  getTicketByNumber,
+  getTicketQR,
+  verifyQrToken,
 
-    getMyTickets,
-    getAllTickets,
+  getMyTickets,
+  getAllTickets,
 
-    getTicketsByEvent,
-    getTicketsByFestival,
+  getTicketsByEvent,
+  getTicketsByFestival,
 
-    checkInTicket,
-    expireTicket,
+  checkInTicket,
+  expireTicket,
 
-    getCheckedInTickets,
+  getCheckedInTickets,
 
-    deleteTicket,
-  });
+  deleteTicket,
+});
 
 export default ticketService;

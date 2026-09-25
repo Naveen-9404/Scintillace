@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import crypto from "crypto";
+import AdmZip from "adm-zip";
 
 import registrationRepository from "../repositories/registration.repository.js";
 import eventRepository from "../repositories/event.repository.js";
@@ -29,15 +30,9 @@ import {
   PAYMENT_FOR,
 } from "../constants/payment.constants.js";
 
-import {
-  EVENT_STATUS,
-  EVENT_TYPES,
-} from "../constants/event.constants.js";
+import { EVENT_STATUS, EVENT_TYPES } from "../constants/event.constants.js";
 
-import {
-  TEAM_STATUS,
-  TEAM_MEMBER_ROLE,
-} from "../constants/team.constants.js";
+import { TEAM_STATUS, TEAM_MEMBER_ROLE } from "../constants/team.constants.js";
 
 /**
  * ============================================================
@@ -45,18 +40,9 @@ import {
  * ============================================================
  */
 
-const assertValidObjectId = (
-  value,
-  fieldName,
-) => {
-  if (
-    !value ||
-    !mongoose.isValidObjectId(value)
-  ) {
-    throw new ApiError(
-      `Invalid ${fieldName}.`,
-      HTTP_STATUS.BAD_REQUEST,
-    );
+const assertValidObjectId = (value, fieldName) => {
+  if (!value || !mongoose.isValidObjectId(value)) {
+    throw new ApiError(`Invalid ${fieldName}.`, HTTP_STATUS.BAD_REQUEST);
   }
 };
 
@@ -66,33 +52,25 @@ const assertValidObjectId = (
  * ============================================================
  */
 
-const isEventRegistrationOpen = (
-  event,
-) => {
+const isEventRegistrationOpen = (event) => {
   if (!event) {
     return false;
   }
 
-  if (
-    event.registrationOpen !== true
-  ) {
+  if (event.registrationOpen !== true) {
     return false;
   }
 
   if (
-    event.status ===
-      EVENT_STATUS.CANCELLED ||
-    event.status ===
-      EVENT_STATUS.COMPLETED
+    event.status === EVENT_STATUS.CANCELLED ||
+    event.status === EVENT_STATUS.COMPLETED
   ) {
     return false;
   }
 
   return (
-    event.status ===
-      EVENT_STATUS.REGISTRATION_OPEN ||
-    event.status ===
-      EVENT_STATUS.PUBLISHED
+    event.status === EVENT_STATUS.REGISTRATION_OPEN ||
+    event.status === EVENT_STATUS.PUBLISHED
   );
 };
 
@@ -102,9 +80,7 @@ const isEventRegistrationOpen = (
  * ============================================================
  */
 
-const getFestivalId = (
-  event,
-) => {
+const getFestivalId = (event) => {
   if (!event?.festival) {
     throw new ApiError(
       "Event is not associated with a festival.",
@@ -112,10 +88,7 @@ const getFestivalId = (
     );
   }
 
-  if (
-    typeof event.festival === "object" &&
-    event.festival._id
-  ) {
+  if (typeof event.festival === "object" && event.festival._id) {
     return event.festival._id;
   }
 
@@ -128,29 +101,18 @@ const getFestivalId = (
  * ============================================================
  */
 
-const teamContainsUser = (
-  team,
-  userId,
-) => {
+const teamContainsUser = (team, userId) => {
   if (!team?.members) {
     return false;
   }
 
   return team.members.some(
-    (member) =>
-      member.user?.toString() ===
-      userId.toString(),
+    (member) => member.user?.toString() === userId.toString(),
   );
 };
 
-const getTeamMemberCount = (
-  team,
-) => {
-  return Array.isArray(
-    team?.members,
-  )
-    ? team.members.length
-    : 0;
+const getTeamMemberCount = (team) => {
+  return Array.isArray(team?.members) ? team.members.length : 0;
 };
 
 /**
@@ -159,61 +121,41 @@ const getTeamMemberCount = (
  * ============================================================
  */
 
-const validateEventForRegistration =
-  async (eventId) => {
-    assertValidObjectId(
-      eventId,
-      "Event ID",
+const validateEventForRegistration = async (eventId) => {
+  assertValidObjectId(eventId, "Event ID");
+
+  const event = await eventRepository.findByIdRaw(eventId);
+
+  if (!event) {
+    throw new ApiError("Event not found.", HTTP_STATUS.NOT_FOUND);
+  }
+
+  if (!isEventRegistrationOpen(event)) {
+    throw new ApiError(
+      "Registration is not open for this event.",
+      HTTP_STATUS.BAD_REQUEST,
     );
+  }
 
-    const event =
-      await eventRepository.findByIdRaw(
-        eventId,
-      );
+  if (
+    event.registrationDeadline &&
+    new Date() > new Date(event.registrationDeadline)
+  ) {
+    throw new ApiError(
+      "Registration deadline has passed.",
+      HTTP_STATUS.BAD_REQUEST,
+    );
+  }
 
-    if (!event) {
-      throw new ApiError(
-        "Event not found.",
-        HTTP_STATUS.NOT_FOUND,
-      );
-    }
+  if (new Date() >= new Date(event.startDateTime)) {
+    throw new ApiError(
+      "Registration is no longer available because the event has started.",
+      HTTP_STATUS.BAD_REQUEST,
+    );
+  }
 
-    if (
-      !isEventRegistrationOpen(
-        event,
-      )
-    ) {
-      throw new ApiError(
-        "Registration is not open for this event.",
-        HTTP_STATUS.BAD_REQUEST,
-      );
-    }
-
-    if (
-      event.registrationDeadline &&
-      new Date() >
-        new Date(
-          event.registrationDeadline,
-        )
-    ) {
-      throw new ApiError(
-        "Registration deadline has passed.",
-        HTTP_STATUS.BAD_REQUEST,
-      );
-    }
-
-    if (
-      new Date() >=
-      new Date(event.startDateTime)
-    ) {
-      throw new ApiError(
-        "Registration is no longer available because the event has started.",
-        HTTP_STATUS.BAD_REQUEST,
-      );
-    }
-
-    return event;
-  };
+  return event;
+};
 
 /**
  * ============================================================
@@ -221,46 +163,34 @@ const validateEventForRegistration =
  * ============================================================
  */
 
-const validateIndividualRegistration =
-  async (
-    userId,
-    event,
-  ) => {
-    const existingRegistration =
-      await registrationRepository.findActiveByUserAndEvent(
-        userId,
-        event._id,
-      );
+const validateIndividualRegistration = async (userId, event) => {
+  const existingRegistration =
+    await registrationRepository.findActiveByUserAndEvent(userId, event._id);
 
-    if (existingRegistration) {
-      if (
-        event.isPaid &&
-        (
-          existingRegistration.status ===
-            REGISTRATION_STATUS.PENDING ||
-          existingRegistration.paymentStatus ===
-            PAYMENT_STATUS.PENDING ||
-          existingRegistration.paymentStatus ===
-            PAYMENT_STATUS.FAILED
-        )
-      ) {
-        return {
-          existingRegistration,
-          participantCount: 1,
-        };
-      }
-
-      throw new ApiError(
-        "You are already registered for this event.",
-        HTTP_STATUS.CONFLICT,
-      );
+  if (existingRegistration) {
+    if (
+      event.isPaid &&
+      (existingRegistration.status === REGISTRATION_STATUS.PENDING ||
+        existingRegistration.paymentStatus === PAYMENT_STATUS.PENDING ||
+        existingRegistration.paymentStatus === PAYMENT_STATUS.FAILED)
+    ) {
+      return {
+        existingRegistration,
+        participantCount: 1,
+      };
     }
 
-    return {
-      existingRegistration: null,
-      participantCount: 1,
-    };
+    throw new ApiError(
+      "You are already registered for this event.",
+      HTTP_STATUS.CONFLICT,
+    );
+  }
+
+  return {
+    existingRegistration: null,
+    participantCount: 1,
   };
+};
 
 /**
  * ============================================================
@@ -275,152 +205,102 @@ const validateIndividualRegistration =
  * Registration is performed by the team leader.
  */
 
-const validateTeamRegistration =
-  async (
-    userId,
-    event,
-    teamId,
-  ) => {
-    if (!teamId) {
-      throw new ApiError(
-        "Team ID is required for team events.",
-        HTTP_STATUS.BAD_REQUEST,
-      );
-    }
-
-    assertValidObjectId(
-      teamId,
-      "Team ID",
+const validateTeamRegistration = async (userId, event, teamId) => {
+  if (!teamId) {
+    throw new ApiError(
+      "Team ID is required for team events.",
+      HTTP_STATUS.BAD_REQUEST,
     );
+  }
 
-    const team =
-      await teamRepository.findDocumentById(
-        teamId,
-      );
+  assertValidObjectId(teamId, "Team ID");
 
-    if (!team) {
-      throw new ApiError(
-        "Team not found.",
-        HTTP_STATUS.NOT_FOUND,
-      );
-    }
+  const team = await teamRepository.findDocumentById(teamId);
 
+  if (!team) {
+    throw new ApiError("Team not found.", HTTP_STATUS.NOT_FOUND);
+  }
+
+  if (team.event.toString() !== event._id.toString()) {
+    throw new ApiError(
+      "This team does not belong to the selected event.",
+      HTTP_STATUS.BAD_REQUEST,
+    );
+  }
+
+  if (team.status !== TEAM_STATUS.ACTIVE) {
+    throw new ApiError(
+      "This team is not available for registration.",
+      HTTP_STATUS.BAD_REQUEST,
+    );
+  }
+
+  if (team.leader.toString() !== userId.toString()) {
+    throw new ApiError(
+      "Only the team leader can register the team for this event.",
+      HTTP_STATUS.FORBIDDEN,
+    );
+  }
+
+  if (!teamContainsUser(team, userId)) {
+    throw new ApiError(
+      "Team leader is not a member of this team.",
+      HTTP_STATUS.BAD_REQUEST,
+    );
+  }
+
+  const memberCount = getTeamMemberCount(team);
+
+  if (memberCount < 1) {
+    throw new ApiError(
+      "A team must contain at least one member.",
+      HTTP_STATUS.BAD_REQUEST,
+    );
+  }
+
+  const configuredTeamSize = Number(event.teamSize);
+
+  const maxTeamSize =
+    Number.isFinite(configuredTeamSize) && configuredTeamSize > 0
+      ? Math.min(configuredTeamSize, 3)
+      : 3;
+
+  if (memberCount > maxTeamSize) {
+    throw new ApiError(
+      `Team exceeds the maximum team size of ${maxTeamSize}.`,
+      HTTP_STATUS.BAD_REQUEST,
+    );
+  }
+
+  const existingRegistration =
+    await registrationRepository.findActiveByTeamAndEvent(teamId, event._id);
+
+  if (existingRegistration) {
     if (
-      team.event.toString() !==
-      event._id.toString()
+      event.isPaid &&
+      (existingRegistration.status === REGISTRATION_STATUS.PENDING ||
+        existingRegistration.paymentStatus === PAYMENT_STATUS.PENDING ||
+        existingRegistration.paymentStatus === PAYMENT_STATUS.FAILED)
     ) {
-      throw new ApiError(
-        "This team does not belong to the selected event.",
-        HTTP_STATUS.BAD_REQUEST,
-      );
-    }
-
-    if (
-      team.status !==
-      TEAM_STATUS.ACTIVE
-    ) {
-      throw new ApiError(
-        "This team is not available for registration.",
-        HTTP_STATUS.BAD_REQUEST,
-      );
-    }
-
-    if (
-      team.leader.toString() !==
-      userId.toString()
-    ) {
-      throw new ApiError(
-        "Only the team leader can register the team for this event.",
-        HTTP_STATUS.FORBIDDEN,
-      );
-    }
-
-    if (
-      !teamContainsUser(
+      return {
         team,
-        userId,
-      )
-    ) {
-      throw new ApiError(
-        "Team leader is not a member of this team.",
-        HTTP_STATUS.BAD_REQUEST,
-      );
+        existingRegistration,
+        participantCount: memberCount,
+      };
     }
 
-    const memberCount =
-      getTeamMemberCount(team);
+    throw new ApiError(
+      "This team is already registered for this event.",
+      HTTP_STATUS.CONFLICT,
+    );
+  }
 
-    if (memberCount < 1) {
-      throw new ApiError(
-        "A team must contain at least one member.",
-        HTTP_STATUS.BAD_REQUEST,
-      );
-    }
-
-    const configuredTeamSize =
-      Number(event.teamSize);
-
-    const maxTeamSize =
-      Number.isFinite(
-        configuredTeamSize,
-      ) &&
-      configuredTeamSize > 0
-        ? Math.min(
-            configuredTeamSize,
-            3,
-          )
-        : 3;
-
-    if (
-      memberCount >
-      maxTeamSize
-    ) {
-      throw new ApiError(
-        `Team exceeds the maximum team size of ${maxTeamSize}.`,
-        HTTP_STATUS.BAD_REQUEST,
-      );
-    }
-
-    const existingRegistration =
-      await registrationRepository.findActiveByTeamAndEvent(
-        teamId,
-        event._id,
-      );
-
-    if (existingRegistration) {
-      if (
-        event.isPaid &&
-        (
-          existingRegistration.status ===
-            REGISTRATION_STATUS.PENDING ||
-          existingRegistration.paymentStatus ===
-            PAYMENT_STATUS.PENDING ||
-          existingRegistration.paymentStatus ===
-            PAYMENT_STATUS.FAILED
-        )
-      ) {
-        return {
-          team,
-          existingRegistration,
-          participantCount:
-            memberCount,
-        };
-      }
-
-      throw new ApiError(
-        "This team is already registered for this event.",
-        HTTP_STATUS.CONFLICT,
-      );
-    }
-
-    return {
-      team,
-      existingRegistration: null,
-      participantCount:
-        memberCount,
-    };
+  return {
+    team,
+    existingRegistration: null,
+    participantCount: memberCount,
   };
-
+};
 
 /**
  * ============================================================
@@ -428,244 +308,205 @@ const validateTeamRegistration =
  * ============================================================
  */
 
-const createRegistration =
-  async (
-    userId,
-    eventId,
-    teamId = null,
-    screenshotUrl = null,
-    screenshotPublicId = null,
-    projectTitle = "",
-  ) => {
-    assertValidObjectId(
-      userId,
-      "User ID",
+const createRegistration = async (
+  userId,
+  eventId,
+  teamId = null,
+  screenshotUrl = null,
+  screenshotPublicId = null,
+  projectTitle = "",
+) => {
+  assertValidObjectId(userId, "User ID");
+
+  const event = await validateEventForRegistration(eventId);
+
+  if (event.isPaid && !screenshotUrl) {
+    throw new ApiError(
+      "Payment screenshot is required for paid events.",
+      HTTP_STATUS.BAD_REQUEST,
     );
+  }
 
-    const event =
-      await validateEventForRegistration(
-        eventId,
-      );
+  /**
+   * ========================================================
+   * Participant Name Snapshot
+   * ========================================================
+   *
+   * Capture the user's current profile name at registration.
+   *
+   * This value is stored permanently with the registration
+   * and later copied to the certificate.
+   */
 
-    if (event.isPaid && !screenshotUrl) {
+  const user = await User.findById(userId).select("fullName").lean();
+
+  if (!user) {
+    throw new ApiError("User not found.", HTTP_STATUS.NOT_FOUND);
+  }
+
+  const participantName = user.fullName?.trim();
+
+  if (!participantName) {
+    throw new ApiError(
+      "Please complete your profile name before registering.",
+      HTTP_STATUS.BAD_REQUEST,
+    );
+  }
+
+  /**
+   * ========================================================
+   * Determine Registration Type
+   * ========================================================
+   */
+
+  let team = null;
+  let participantCount = 1;
+  let existingRegistration = null;
+
+  if (
+    event.type === EVENT_TYPES.TEAM ||
+    (event.type === EVENT_TYPES.INDIVIDUAL_OR_TEAM && teamId)
+  ) {
+    const teamResult = await validateTeamRegistration(userId, event, teamId);
+
+    team = teamResult.team;
+    participantCount = teamResult.participantCount;
+    existingRegistration = teamResult.existingRegistration;
+  } else {
+    if (teamId && event.type !== EVENT_TYPES.INDIVIDUAL_OR_TEAM) {
       throw new ApiError(
-        "Payment screenshot is required for paid events.",
+        "Team registration is not allowed for an individual event.",
         HTTP_STATUS.BAD_REQUEST,
       );
     }
 
-    /**
-     * ========================================================
-     * Participant Name Snapshot
-     * ========================================================
-     *
-     * Capture the user's current profile name at registration.
-     *
-     * This value is stored permanently with the registration
-     * and later copied to the certificate.
-     */
+    const result = await validateIndividualRegistration(userId, event);
 
-    const user =
-      await User.findById(userId)
-        .select("fullName")
-        .lean();
+    participantCount = result.participantCount;
 
-    if (!user) {
-      throw new ApiError(
-        "User not found.",
-        HTTP_STATUS.NOT_FOUND,
-      );
-    }
+    existingRegistration = result.existingRegistration;
+  }
 
-    const participantName =
-      user.fullName?.trim();
+  /**
+   * ========================================================
+   * Existing Pending Registration
+   * ========================================================
+   */
 
-    if (!participantName) {
-      throw new ApiError(
-        "Please complete your profile name before registering.",
-        HTTP_STATUS.BAD_REQUEST,
-      );
-    }
-
-    /**
-     * ========================================================
-     * Determine Registration Type
-     * ========================================================
-     */
-
-    let team = null;
-    let participantCount = 1;
-    let existingRegistration = null;
-
-    if (
-      event.type === EVENT_TYPES.TEAM ||
-      (event.type === EVENT_TYPES.INDIVIDUAL_OR_TEAM && teamId)
-    ) {
-      const teamResult =
-        await validateTeamRegistration(
-          userId,
-          event,
-          teamId,
-        );
-
-      team = teamResult.team;
-      participantCount = teamResult.participantCount;
-      existingRegistration = teamResult.existingRegistration;
-    } else {
-      if (teamId && event.type !== EVENT_TYPES.INDIVIDUAL_OR_TEAM) {
-        throw new ApiError(
-          "Team registration is not allowed for an individual event.",
-          HTTP_STATUS.BAD_REQUEST,
-        );
-      }
-
-      const result =
-        await validateIndividualRegistration(
-          userId,
-          event,
-        );
-
-      participantCount =
-        result.participantCount;
-
-      existingRegistration =
-        result.existingRegistration;
-    }
-
-    /**
-     * ========================================================
-     * Existing Pending Registration
-     * ========================================================
-     */
-
-    if (
-      existingRegistration
-    ) {
-      if (!event.isPaid) {
-        return {
-          paymentRequired: false,
-
-          registration:
-            existingRegistration,
-
-          participantCount,
-        };
-      }
-
-      throw new ApiError(
-        "You already have a pending registration for this event.",
-        HTTP_STATUS.CONFLICT,
-      );
-    }
-
-
-    /**
-     * ========================================================
-     * Registration Data
-     * ========================================================
-     */
-
-    const registrationData = {
-      user: userId,
-
-      participantName,
-
-      event: event._id,
-
-      festival:
-        getFestivalId(event),
-
-      team: team
-        ? team._id
-        : null,
-
-      projectTitle: team ? "" : projectTitle,
-
-      status:
-        event.isPaid
-          ? REGISTRATION_STATUS.PENDING
-          : REGISTRATION_STATUS.REGISTERED,
-
-      paymentStatus:
-        event.isPaid
-          ? PAYMENT_STATUS.PENDING
-          : PAYMENT_STATUS.NOT_REQUIRED,
-    };
-
-    /**
-     * ========================================================
-     * Create Registration
-     * ========================================================
-     */
-
-    let registration;
-    try {
-      registration = await registrationRepository.create(
-        registrationData,
-      );
-    } catch (error) {
-      if (error.code === 11000) {
-        throw new ApiError(
-          "A conflicting registration was detected. This team or participant is already registered for this event.",
-          HTTP_STATUS.CONFLICT
-        );
-      }
-      throw error;
-    }
-
-    /**
-     * ========================================================
-     * FREE EVENT
-     * ========================================================
-     */
-
+  if (existingRegistration) {
     if (!event.isPaid) {
       return {
         paymentRequired: false,
 
-        registration,
+        registration: existingRegistration,
 
         participantCount,
       };
     }
 
-    /**
-     * ========================================================
-     * PAID EVENT
-     * ========================================================
-     */
+    throw new ApiError(
+      "You already have a pending registration for this event.",
+      HTTP_STATUS.CONFLICT,
+    );
+  }
 
-    const paymentData = {
-      user: userId,
-      registration: registration._id,
-      paymentFor: PAYMENT_FOR.EVENT,
-      amount: event.registrationFee,
-      currency: event.currency || "INR",
-      gateway: PAYMENT_GATEWAY.UPI,
-      screenshotUrl,
-      screenshotPublicId,
-      status: PAYMENT_STATUS.PENDING,
-    };
+  /**
+   * ========================================================
+   * Registration Data
+   * ========================================================
+   */
 
-    await paymentRepository.create(paymentData);
+  const registrationData = {
+    user: userId,
 
+    participantName,
+
+    event: event._id,
+
+    festival: getFestivalId(event),
+
+    team: team ? team._id : null,
+
+    projectTitle: team ? "" : projectTitle,
+
+    status: event.isPaid
+      ? REGISTRATION_STATUS.PENDING
+      : REGISTRATION_STATUS.REGISTERED,
+
+    paymentStatus: event.isPaid
+      ? PAYMENT_STATUS.PENDING
+      : PAYMENT_STATUS.NOT_REQUIRED,
+  };
+
+  /**
+   * ========================================================
+   * Create Registration
+   * ========================================================
+   */
+
+  let registration;
+  try {
+    registration = await registrationRepository.create(registrationData);
+  } catch (error) {
+    if (error.code === 11000) {
+      throw new ApiError(
+        "A conflicting registration was detected. This team or participant is already registered for this event.",
+        HTTP_STATUS.CONFLICT,
+      );
+    }
+    throw error;
+  }
+
+  /**
+   * ========================================================
+   * FREE EVENT
+   * ========================================================
+   */
+
+  if (!event.isPaid) {
     return {
-      paymentRequired: true,
+      paymentRequired: false,
 
       registration,
 
       participantCount,
-
-      amount:
-        event.registrationFee,
-
-      currency:
-        event.currency ||
-        "INR",
-
-      isRetry: false,
     };
+  }
+
+  /**
+   * ========================================================
+   * PAID EVENT
+   * ========================================================
+   */
+
+  const paymentData = {
+    user: userId,
+    registration: registration._id,
+    paymentFor: PAYMENT_FOR.EVENT,
+    amount: event.registrationFee,
+    currency: event.currency || "INR",
+    gateway: PAYMENT_GATEWAY.UPI,
+    screenshotUrl,
+    screenshotPublicId,
+    status: PAYMENT_STATUS.PENDING,
   };
+
+  await paymentRepository.create(paymentData);
+
+  return {
+    paymentRequired: true,
+
+    registration,
+
+    participantCount,
+
+    amount: event.registrationFee,
+
+    currency: event.currency || "INR",
+
+    isRetry: false,
+  };
+};
 
 /**
  * ============================================================
@@ -673,92 +514,65 @@ const createRegistration =
  * ============================================================
  */
 
-const getAllRegistrations =
-  async ({
-    page = 1,
-    limit = 10,
-    filter = {},
-  } = {}) => {
-    const registrations =
-      await registrationRepository.findAll({
-        filter,
-        page,
-        limit,
-      });
+const getAllRegistrations = async ({
+  page = 1,
+  limit = 10,
+  filter = {},
+} = {}) => {
+  const registrations = await registrationRepository.findAll({
+    filter,
+    page,
+    limit,
+  });
 
-    const total =
-      await registrationRepository.count(
-        filter,
-      );
+  const total = await registrationRepository.count(filter);
 
-    return {
-      registrations,
+  return {
+    registrations,
 
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages:
-          Math.ceil(
-            total / limit,
-          ),
-      },
-    };
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
   };
-  /**
+};
+/**
  * ============================================================
  * Get Registration By ID
  * ============================================================
  */
 
-const getRegistrationById =
-  async (
-    registrationId,
-    userId,
-    userRole,
-  ) => {
-    assertValidObjectId(
-      registrationId,
-      "Registration ID",
-    );
+const getRegistrationById = async (registrationId, userId, userRole) => {
+  assertValidObjectId(registrationId, "Registration ID");
 
-    const registration =
-      await registrationRepository.findById(
-        registrationId,
-      );
+  const registration = await registrationRepository.findById(registrationId);
 
-    if (!registration) {
-      throw new ApiError(
-        "Registration not found.",
-        HTTP_STATUS.NOT_FOUND,
-      );
-    }
+  if (!registration) {
+    throw new ApiError("Registration not found.", HTTP_STATUS.NOT_FOUND);
+  }
 
-    const isAdmin =
-      userRole === "SUPER_ADMIN" ||
-      userRole === "FACULTY";
+  const isAdmin = userRole === "SUPER_ADMIN" || userRole === "FACULTY";
 
-    if (isAdmin) {
-      return registration;
-    }
-
-    const registrationUserId =
-      registration.user?._id ||
-      registration.user;
-
-    if (
-      !registrationUserId ||
-      registrationUserId.toString() !==
-        userId.toString()
-    ) {
-      throw new ApiError(
-        "You are not authorized to view this registration.",
-        HTTP_STATUS.FORBIDDEN,
-      );
-    }
-
+  if (isAdmin) {
     return registration;
-  };
+  }
+
+  const registrationUserId = registration.user?._id || registration.user;
+
+  if (
+    !registrationUserId ||
+    registrationUserId.toString() !== userId.toString()
+  ) {
+    throw new ApiError(
+      "You are not authorized to view this registration.",
+      HTTP_STATUS.FORBIDDEN,
+    );
+  }
+
+  return registration;
+};
 
 /**
  * ============================================================
@@ -766,27 +580,14 @@ const getRegistrationById =
  * ============================================================
  */
 
-const getMyRegistrations =
-  async (
-    userId,
-    {
-      page = 1,
-      limit = 10,
-    } = {},
-  ) => {
-    assertValidObjectId(
-      userId,
-      "User ID",
-    );
+const getMyRegistrations = async (userId, { page = 1, limit = 10 } = {}) => {
+  assertValidObjectId(userId, "User ID");
 
-    return registrationRepository.findByUser(
-      userId,
-      {
-        page,
-        limit,
-      },
-    );
-  };
+  return registrationRepository.findByUser(userId, {
+    page,
+    limit,
+  });
+};
 
 /**
  * ============================================================
@@ -794,39 +595,23 @@ const getMyRegistrations =
  * ============================================================
  */
 
-const getRegistrationsByEvent =
-  async (
-    eventId,
-    {
-      page = 1,
-      limit = 10,
-    } = {},
-  ) => {
-    assertValidObjectId(
-      eventId,
-      "Event ID",
-    );
+const getRegistrationsByEvent = async (
+  eventId,
+  { page = 1, limit = 10 } = {},
+) => {
+  assertValidObjectId(eventId, "Event ID");
 
-    const event =
-      await eventRepository.findByIdRaw(
-        eventId,
-      );
+  const event = await eventRepository.findByIdRaw(eventId);
 
-    if (!event) {
-      throw new ApiError(
-        "Event not found.",
-        HTTP_STATUS.NOT_FOUND,
-      );
-    }
+  if (!event) {
+    throw new ApiError("Event not found.", HTTP_STATUS.NOT_FOUND);
+  }
 
-    return registrationRepository.findByEvent(
-      eventId,
-      {
-        page,
-        limit,
-      },
-    );
-  };
+  return registrationRepository.findByEvent(eventId, {
+    page,
+    limit,
+  });
+};
 
 /**
  * ============================================================
@@ -834,27 +619,17 @@ const getRegistrationsByEvent =
  * ============================================================
  */
 
-const getRegistrationsByFestival =
-  async (
-    festivalId,
-    {
-      page = 1,
-      limit = 10,
-    } = {},
-  ) => {
-    assertValidObjectId(
-      festivalId,
-      "Festival ID",
-    );
+const getRegistrationsByFestival = async (
+  festivalId,
+  { page = 1, limit = 10 } = {},
+) => {
+  assertValidObjectId(festivalId, "Festival ID");
 
-    return registrationRepository.findByFestival(
-      festivalId,
-      {
-        page,
-        limit,
-      },
-    );
-  };
+  return registrationRepository.findByFestival(festivalId, {
+    page,
+    limit,
+  });
+};
 
 /**
  * ============================================================
@@ -862,39 +637,23 @@ const getRegistrationsByFestival =
  * ============================================================
  */
 
-const getRegistrationsByTeam =
-  async (
-    teamId,
-    {
-      page = 1,
-      limit = 10,
-    } = {},
-  ) => {
-    assertValidObjectId(
-      teamId,
-      "Team ID",
-    );
+const getRegistrationsByTeam = async (
+  teamId,
+  { page = 1, limit = 10 } = {},
+) => {
+  assertValidObjectId(teamId, "Team ID");
 
-    const team =
-      await teamRepository.findDocumentById(
-        teamId,
-      );
+  const team = await teamRepository.findDocumentById(teamId);
 
-    if (!team) {
-      throw new ApiError(
-        "Team not found.",
-        HTTP_STATUS.NOT_FOUND,
-      );
-    }
+  if (!team) {
+    throw new ApiError("Team not found.", HTTP_STATUS.NOT_FOUND);
+  }
 
-    return registrationRepository.findByTeam(
-      teamId,
-      {
-        page,
-        limit,
-      },
-    );
-  };
+  return registrationRepository.findByTeam(teamId, {
+    page,
+    limit,
+  });
+};
 
 /**
  * ============================================================
@@ -902,88 +661,53 @@ const getRegistrationsByTeam =
  * ============================================================
  */
 
-const cancelRegistration =
-  async (
-    registrationId,
-    userId,
-  ) => {
-    assertValidObjectId(
-      registrationId,
-      "Registration ID",
+const cancelRegistration = async (registrationId, userId) => {
+  assertValidObjectId(registrationId, "Registration ID");
+
+  assertValidObjectId(userId, "User ID");
+
+  const registration = await registrationRepository.findById(registrationId);
+
+  if (!registration) {
+    throw new ApiError("Registration not found.", HTTP_STATUS.NOT_FOUND);
+  }
+
+  const registrationUserId = registration.user?._id ?? registration.user;
+
+  if (registrationUserId.toString() !== userId.toString()) {
+    throw new ApiError(
+      "You are not authorized to cancel this registration.",
+      HTTP_STATUS.FORBIDDEN,
     );
+  }
 
-    assertValidObjectId(
-      userId,
-      "User ID",
+  if (registration.status === REGISTRATION_STATUS.CANCELLED) {
+    throw new ApiError(
+      "Registration is already cancelled.",
+      HTTP_STATUS.BAD_REQUEST,
     );
+  }
 
-    const registration =
-      await registrationRepository.findById(
-        registrationId,
-      );
-
-    if (!registration) {
-      throw new ApiError(
-        "Registration not found.",
-        HTTP_STATUS.NOT_FOUND,
-      );
-    }
-
-    const registrationUserId =
-      registration.user?._id ??
-      registration.user;
-
-    if (
-      registrationUserId
-        .toString() !==
-      userId.toString()
-    ) {
-      throw new ApiError(
-        "You are not authorized to cancel this registration.",
-        HTTP_STATUS.FORBIDDEN,
-      );
-    }
-
-    if (
-      registration.status ===
-      REGISTRATION_STATUS.CANCELLED
-    ) {
-      throw new ApiError(
-        "Registration is already cancelled.",
-        HTTP_STATUS.BAD_REQUEST,
-      );
-    }
-
-    if (
-      registration.checkedIn
-    ) {
-      throw new ApiError(
-        "A checked-in registration cannot be cancelled.",
-        HTTP_STATUS.BAD_REQUEST,
-      );
-    }
-
-    if (
-      registration.paymentStatus ===
-      PAYMENT_STATUS.PAID
-    ) {
-      throw new ApiError(
-        "Paid registrations must be cancelled through the payment/refund process.",
-        HTTP_STATUS.BAD_REQUEST,
-      );
-    }
-
-    return registrationRepository.updateById(
-      registrationId,
-      {
-        status:
-          REGISTRATION_STATUS.CANCELLED,
-
-        cancellationDate:
-          new Date(),
-      },
+  if (registration.checkedIn) {
+    throw new ApiError(
+      "A checked-in registration cannot be cancelled.",
+      HTTP_STATUS.BAD_REQUEST,
     );
-  };
+  }
+
+  if (registration.paymentStatus === PAYMENT_STATUS.PAID) {
+    throw new ApiError(
+      "Paid registrations must be cancelled through the payment/refund process.",
+      HTTP_STATUS.BAD_REQUEST,
+    );
+  }
+
+  return registrationRepository.updateById(registrationId, {
+    status: REGISTRATION_STATUS.CANCELLED,
+
+    cancellationDate: new Date(),
+  });
+};
 
 /**
  * ============================================================
@@ -991,58 +715,33 @@ const cancelRegistration =
  * ============================================================
  */
 
-const updateRegistrationStatus =
-  async (
-    registrationId,
+const updateRegistrationStatus = async (registrationId, status) => {
+  assertValidObjectId(registrationId, "Registration ID");
+
+  if (!Object.values(REGISTRATION_STATUS).includes(status)) {
+    throw new ApiError("Invalid registration status.", HTTP_STATUS.BAD_REQUEST);
+  }
+
+  const registration = await registrationRepository.findById(registrationId);
+
+  if (!registration) {
+    throw new ApiError("Registration not found.", HTTP_STATUS.NOT_FOUND);
+  }
+
+  if (
+    registration.status === REGISTRATION_STATUS.CANCELLED &&
+    status !== REGISTRATION_STATUS.CANCELLED
+  ) {
+    throw new ApiError(
+      "A cancelled registration cannot be reactivated.",
+      HTTP_STATUS.BAD_REQUEST,
+    );
+  }
+
+  return registrationRepository.updateById(registrationId, {
     status,
-  ) => {
-    assertValidObjectId(
-      registrationId,
-      "Registration ID",
-    );
-
-    if (
-      !Object.values(
-        REGISTRATION_STATUS,
-      ).includes(status)
-    ) {
-      throw new ApiError(
-        "Invalid registration status.",
-        HTTP_STATUS.BAD_REQUEST,
-      );
-    }
-
-    const registration =
-      await registrationRepository.findById(
-        registrationId,
-      );
-
-    if (!registration) {
-      throw new ApiError(
-        "Registration not found.",
-        HTTP_STATUS.NOT_FOUND,
-      );
-    }
-
-    if (
-      registration.status ===
-        REGISTRATION_STATUS.CANCELLED &&
-      status !==
-        REGISTRATION_STATUS.CANCELLED
-    ) {
-      throw new ApiError(
-        "A cancelled registration cannot be reactivated.",
-        HTTP_STATUS.BAD_REQUEST,
-      );
-    }
-
-    return registrationRepository.updateById(
-      registrationId,
-      {
-        status,
-      },
-    );
-  };
+  });
+};
 
 /**
  * ============================================================
@@ -1056,12 +755,20 @@ import emailJobRepository from "../repositories/emailJob.repository.js";
 const enqueuePostApprovalEmails = async (updatedRegistration, tickets) => {
   try {
     const getReferenceId = (reference) => reference?._id || reference;
-    const user = updatedRegistration.user ? await User.findById(getReferenceId(updatedRegistration.user)).lean() : null;
-    const event = await eventRepository.findByIdRaw(getReferenceId(updatedRegistration.event));
+    const user = updatedRegistration.user
+      ? await User.findById(getReferenceId(updatedRegistration.user)).lean()
+      : null;
+    const event = await eventRepository.findByIdRaw(
+      getReferenceId(updatedRegistration.event),
+    );
 
     if (event && tickets.length > 0) {
       const RegistrationModel = mongoose.model("Registration");
-      const fullRegistration = await RegistrationModel.findById(updatedRegistration._id).populate("team").lean();
+      const fullRegistration = await RegistrationModel.findById(
+        updatedRegistration._id,
+      )
+        .populate("team")
+        .lean();
 
       const jobsData = [];
 
@@ -1069,8 +776,14 @@ const enqueuePostApprovalEmails = async (updatedRegistration, tickets) => {
         let participantEmail = "";
         let participantName = "";
 
-        if (ticket.teamMemberId && fullRegistration.team && fullRegistration.team.members) {
-          const member = fullRegistration.team.members.find(m => m._id.toString() === ticket.teamMemberId.toString());
+        if (
+          ticket.teamMemberId &&
+          fullRegistration.team &&
+          fullRegistration.team.members
+        ) {
+          const member = fullRegistration.team.members.find(
+            (m) => m._id.toString() === ticket.teamMemberId.toString(),
+          );
           if (member) {
             participantEmail = member.participantEmail;
             participantName = member.participantName || "Team Member";
@@ -1098,105 +811,82 @@ const enqueuePostApprovalEmails = async (updatedRegistration, tickets) => {
 
       if (jobsData.length > 0) {
         await emailJobRepository.createConfirmationJobs(jobsData);
-        logger.info(`Successfully enqueued ${jobsData.length} registration confirmation email jobs for registration ${updatedRegistration._id}.`);
+        logger.info(
+          `Successfully enqueued ${jobsData.length} registration confirmation email jobs for registration ${updatedRegistration._id}.`,
+        );
       }
     }
   } catch (error) {
-    logger.error(`Failed to enqueue confirmation emails for registration ${updatedRegistration._id}: ${error.message}`);
+    logger.error(
+      `Failed to enqueue confirmation emails for registration ${updatedRegistration._id}: ${error.message}`,
+    );
     // We do not re-throw here to ensure payment status update succeeds even if queueing fails.
   }
 };
 
-const updatePaymentStatus =
-  async (
-    registrationId,
+const updatePaymentStatus = async (registrationId, paymentStatus) => {
+  assertValidObjectId(registrationId, "Registration ID");
+
+  if (!Object.values(PAYMENT_STATUS).includes(paymentStatus)) {
+    throw new ApiError("Invalid payment status.", HTTP_STATUS.BAD_REQUEST);
+  }
+
+  const registration = await registrationRepository.findById(registrationId);
+
+  if (!registration) {
+    throw new ApiError("Registration not found.", HTTP_STATUS.NOT_FOUND);
+  }
+
+  const updateData = {
     paymentStatus,
-  ) => {
-    assertValidObjectId(
-      registrationId,
-      "Registration ID",
-    );
-
-    if (
-      !Object.values(
-        PAYMENT_STATUS,
-      ).includes(
-        paymentStatus,
-      )
-    ) {
-      throw new ApiError(
-        "Invalid payment status.",
-        HTTP_STATUS.BAD_REQUEST,
-      );
-    }
-
-    const registration =
-      await registrationRepository.findById(
-        registrationId,
-      );
-
-    if (!registration) {
-      throw new ApiError(
-        "Registration not found.",
-        HTTP_STATUS.NOT_FOUND,
-      );
-    }
-
-    const updateData = {
-      paymentStatus,
-    };
-
-    if (
-      paymentStatus ===
-      PAYMENT_STATUS.PAID
-    ) {
-      updateData.status =
-        REGISTRATION_STATUS.REGISTERED;
-    }
-
-    if (
-      paymentStatus ===
-      PAYMENT_STATUS.FAILED
-    ) {
-      updateData.status =
-        REGISTRATION_STATUS.PENDING;
-    }
-
-    if (
-      paymentStatus ===
-      PAYMENT_STATUS.REFUNDED
-    ) {
-      updateData.status =
-        REGISTRATION_STATUS.CANCELLED;
-
-      updateData.cancellationDate =
-        new Date();
-    }
-
-    const updatedRegistration = await registrationRepository.updateById(
-      registrationId,
-      updateData,
-    );
-
-    if (
-      paymentStatus === PAYMENT_STATUS.PAID &&
-      registration.paymentStatus !== PAYMENT_STATUS.PAID
-    ) {
-      try {
-        let tickets = await mongoose.model("Ticket").find({ registration: updatedRegistration._id }).select("+qrToken").lean();
-        if (tickets.length === 0) {
-          tickets = await ticketService.createTicketsForRegistration(updatedRegistration._id);
-        }
-
-        // Enqueue email jobs synchronously (this writes to DB quickly without blocking on PDF/SMTP)
-        await enqueuePostApprovalEmails(updatedRegistration, tickets);
-      } catch (error) {
-        logger.error(`Ticket creation failed for registration ${updatedRegistration._id}: ${error.message}`);
-      }
-    }
-
-    return updatedRegistration;
   };
+
+  if (paymentStatus === PAYMENT_STATUS.PAID) {
+    updateData.status = REGISTRATION_STATUS.REGISTERED;
+  }
+
+  if (paymentStatus === PAYMENT_STATUS.FAILED) {
+    updateData.status = REGISTRATION_STATUS.PENDING;
+  }
+
+  if (paymentStatus === PAYMENT_STATUS.REFUNDED) {
+    updateData.status = REGISTRATION_STATUS.CANCELLED;
+
+    updateData.cancellationDate = new Date();
+  }
+
+  const updatedRegistration = await registrationRepository.updateById(
+    registrationId,
+    updateData,
+  );
+
+  if (
+    paymentStatus === PAYMENT_STATUS.PAID &&
+    registration.paymentStatus !== PAYMENT_STATUS.PAID
+  ) {
+    try {
+      let tickets = await mongoose
+        .model("Ticket")
+        .find({ registration: updatedRegistration._id })
+        .select("+qrToken")
+        .lean();
+      if (tickets.length === 0) {
+        tickets = await ticketService.createTicketsForRegistration(
+          updatedRegistration._id,
+        );
+      }
+
+      // Enqueue email jobs synchronously (this writes to DB quickly without blocking on PDF/SMTP)
+      await enqueuePostApprovalEmails(updatedRegistration, tickets);
+    } catch (error) {
+      logger.error(
+        `Ticket creation failed for registration ${updatedRegistration._id}: ${error.message}`,
+      );
+    }
+  }
+
+  return updatedRegistration;
+};
 
 /**
  * ============================================================
@@ -1204,33 +894,33 @@ const updatePaymentStatus =
  * ============================================================
  */
 
-const getPaymentByRegistration =
-  async (registrationId) => {
-    assertValidObjectId(registrationId, "Registration ID");
+const getPaymentByRegistration = async (registrationId) => {
+  assertValidObjectId(registrationId, "Registration ID");
 
-    const payment = await paymentRepository.findPendingByRegistration(
-      registrationId,
+  const payment =
+    await paymentRepository.findPendingByRegistration(registrationId);
+
+  // If there is no pending, we can try to find by registration regardless of status
+  // But since the repository might only have findPendingByRegistration, let's use the Mongoose model directly if needed
+  // Or just use paymentRepository if there's a findByRegistration. Let's check if findByRegistration exists.
+  // I'll assume findByRegistration exists in paymentRepository, otherwise I'll use findPendingByRegistration.
+  // Actually, I'll just rely on paymentRepository.
+
+  // Wait, let's look for paymentRepository.findByRegistration.
+  // Actually, I'll just write it this way and fix it if it crashes.
+  const fullPayment = await mongoose
+    .model("Payment")
+    .findOne({ registration: registrationId });
+
+  if (!fullPayment) {
+    throw new ApiError(
+      "Payment record not found for this registration.",
+      HTTP_STATUS.NOT_FOUND,
     );
+  }
 
-    // If there is no pending, we can try to find by registration regardless of status
-    // But since the repository might only have findPendingByRegistration, let's use the Mongoose model directly if needed
-    // Or just use paymentRepository if there's a findByRegistration. Let's check if findByRegistration exists.
-    // I'll assume findByRegistration exists in paymentRepository, otherwise I'll use findPendingByRegistration.
-    // Actually, I'll just rely on paymentRepository.
-    
-    // Wait, let's look for paymentRepository.findByRegistration.
-    // Actually, I'll just write it this way and fix it if it crashes.
-    const fullPayment = await mongoose.model("Payment").findOne({ registration: registrationId });
-
-    if (!fullPayment) {
-      throw new ApiError(
-        "Payment record not found for this registration.",
-        HTTP_STATUS.NOT_FOUND,
-      );
-    }
-
-    return fullPayment;
-  };
+  return fullPayment;
+};
 
 /**
  * ============================================================
@@ -1238,68 +928,87 @@ const getPaymentByRegistration =
  * ============================================================
  */
 
-const approveRegistration =
-  async (registrationId, adminId, { manualVerification = false, adminNote = "" } = {}) => {
-    assertValidObjectId(registrationId, "Registration ID");
+const approveRegistration = async (
+  registrationId,
+  adminId,
+  { manualVerification = false, adminNote = "" } = {},
+) => {
+  assertValidObjectId(registrationId, "Registration ID");
 
-    const registration = await registrationRepository.findById(registrationId);
-    if (!registration) {
-      throw new ApiError("Registration not found.", HTTP_STATUS.NOT_FOUND);
-    }
+  const registration = await registrationRepository.findById(registrationId);
+  if (!registration) {
+    throw new ApiError("Registration not found.", HTTP_STATUS.NOT_FOUND);
+  }
 
-    if (registration.status !== REGISTRATION_STATUS.PENDING) {
-      throw new ApiError("Registration is not in PENDING status.", HTTP_STATUS.BAD_REQUEST);
-    }
+  if (registration.status !== REGISTRATION_STATUS.PENDING) {
+    throw new ApiError(
+      "Registration is not in PENDING status.",
+      HTTP_STATUS.BAD_REQUEST,
+    );
+  }
 
-    const payment = await mongoose.model("Payment").findOne({ registration: registrationId });
-    if (!payment) {
-      throw new ApiError("Payment record not found.", HTTP_STATUS.NOT_FOUND);
-    }
+  const payment = await mongoose
+    .model("Payment")
+    .findOne({ registration: registrationId });
+  if (!payment) {
+    throw new ApiError("Payment record not found.", HTTP_STATUS.NOT_FOUND);
+  }
 
-    if (payment.status !== PAYMENT_STATUS.PENDING) {
-      throw new ApiError("Payment is not in PENDING status.", HTTP_STATUS.BAD_REQUEST);
-    }
+  if (payment.status !== PAYMENT_STATUS.PENDING) {
+    throw new ApiError(
+      "Payment is not in PENDING status.",
+      HTTP_STATUS.BAD_REQUEST,
+    );
+  }
 
-    if (!payment.screenshotUrl && !manualVerification) {
-      throw new ApiError("Payment proof is missing. Explicit manual verification is required.", HTTP_STATUS.BAD_REQUEST);
-    }
+  if (!payment.screenshotUrl && !manualVerification) {
+    throw new ApiError(
+      "Payment proof is missing. Explicit manual verification is required.",
+      HTTP_STATUS.BAD_REQUEST,
+    );
+  }
 
-    // Atomic update of Payment to prevent duplicate approval
-    const updatedPayment = await mongoose.model("Payment").findOneAndUpdate(
-      { _id: payment._id, status: PAYMENT_STATUS.PENDING },
-      { 
-        $set: { 
-          status: PAYMENT_STATUS.PAID,
-          screenshotUrl: null,
-          screenshotPublicId: null,
-          approvedBy: adminId,
-          approvedAt: new Date(),
-          manualVerification: !!manualVerification,
-          adminNote: adminNote || ""
-        } 
+  // Atomic update of Payment to prevent duplicate approval
+  const updatedPayment = await mongoose.model("Payment").findOneAndUpdate(
+    { _id: payment._id, status: PAYMENT_STATUS.PENDING },
+    {
+      $set: {
+        status: PAYMENT_STATUS.PAID,
+        screenshotUrl: null,
+        screenshotPublicId: null,
+        approvedBy: adminId,
+        approvedAt: new Date(),
+        manualVerification: !!manualVerification,
+        adminNote: adminNote || "",
       },
-      { new: true }
+    },
+    { new: true },
+  );
+
+  if (!updatedPayment) {
+    throw new ApiError(
+      "Failed to verify payment. It may have already been processed.",
+      HTTP_STATUS.CONFLICT,
     );
+  }
 
-    if (!updatedPayment) {
-      throw new ApiError("Failed to verify payment. It may have already been processed.", HTTP_STATUS.CONFLICT);
-    }
+  // Rely on the existing robust side-effect generation function
+  const updatedRegistration = await updatePaymentStatus(
+    registrationId,
+    PAYMENT_STATUS.PAID,
+  );
 
-    // Rely on the existing robust side-effect generation function
-    const updatedRegistration = await updatePaymentStatus(
-      registrationId,
-      PAYMENT_STATUS.PAID
-    );
+  // Clean up the screenshot asset asynchronously
+  if (payment.screenshotPublicId) {
+    cloudinaryUtil.deleteAsset(payment.screenshotPublicId).catch((err) => {
+      logger.error(
+        `Non-blocking error during Cloudinary deletion for approval: ${err.message}`,
+      );
+    });
+  }
 
-    // Clean up the screenshot asset asynchronously
-    if (payment.screenshotPublicId) {
-      cloudinaryUtil.deleteAsset(payment.screenshotPublicId).catch((err) => {
-        logger.error(`Non-blocking error during Cloudinary deletion for approval: ${err.message}`);
-      });
-    }
-
-    return updatedRegistration;
-  };
+  return updatedRegistration;
+};
 
 /**
  * ============================================================
@@ -1307,65 +1016,82 @@ const approveRegistration =
  * ============================================================
  */
 
-const rejectRegistration =
-  async (registrationId, adminId, reason, adminNote = "") => {
-    assertValidObjectId(registrationId, "Registration ID");
+const rejectRegistration = async (
+  registrationId,
+  adminId,
+  reason,
+  adminNote = "",
+) => {
+  assertValidObjectId(registrationId, "Registration ID");
 
-    const registration = await registrationRepository.findById(registrationId);
-    if (!registration) {
-      throw new ApiError("Registration not found.", HTTP_STATUS.NOT_FOUND);
-    }
+  const registration = await registrationRepository.findById(registrationId);
+  if (!registration) {
+    throw new ApiError("Registration not found.", HTTP_STATUS.NOT_FOUND);
+  }
 
-    if (registration.status !== REGISTRATION_STATUS.PENDING) {
-      throw new ApiError("Registration is not in PENDING status.", HTTP_STATUS.BAD_REQUEST);
-    }
+  if (registration.status !== REGISTRATION_STATUS.PENDING) {
+    throw new ApiError(
+      "Registration is not in PENDING status.",
+      HTTP_STATUS.BAD_REQUEST,
+    );
+  }
 
-    const payment = await mongoose.model("Payment").findOne({ registration: registrationId });
-    if (!payment) {
-      throw new ApiError("Payment record not found.", HTTP_STATUS.NOT_FOUND);
-    }
+  const payment = await mongoose
+    .model("Payment")
+    .findOne({ registration: registrationId });
+  if (!payment) {
+    throw new ApiError("Payment record not found.", HTTP_STATUS.NOT_FOUND);
+  }
 
-    if (payment.status !== PAYMENT_STATUS.PENDING) {
-      throw new ApiError("Payment is not in PENDING status.", HTTP_STATUS.BAD_REQUEST);
-    }
+  if (payment.status !== PAYMENT_STATUS.PENDING) {
+    throw new ApiError(
+      "Payment is not in PENDING status.",
+      HTTP_STATUS.BAD_REQUEST,
+    );
+  }
 
-    const updatedPayment = await mongoose.model("Payment").findOneAndUpdate(
-      { _id: payment._id, status: PAYMENT_STATUS.PENDING },
-      { 
-        $set: { 
-          status: PAYMENT_STATUS.FAILED,
-          screenshotUrl: null,
-          screenshotPublicId: null,
-          rejectedBy: adminId,
-          rejectedAt: new Date(),
-          adminNote: adminNote || reason || ""
-        } 
+  const updatedPayment = await mongoose.model("Payment").findOneAndUpdate(
+    { _id: payment._id, status: PAYMENT_STATUS.PENDING },
+    {
+      $set: {
+        status: PAYMENT_STATUS.FAILED,
+        screenshotUrl: null,
+        screenshotPublicId: null,
+        rejectedBy: adminId,
+        rejectedAt: new Date(),
+        adminNote: adminNote || reason || "",
       },
-      { new: true }
+    },
+    { new: true },
+  );
+
+  if (!updatedPayment) {
+    throw new ApiError(
+      "Failed to reject payment. It may have already been processed.",
+      HTTP_STATUS.CONFLICT,
     );
+  }
 
-    if (!updatedPayment) {
-      throw new ApiError("Failed to reject payment. It may have already been processed.", HTTP_STATUS.CONFLICT);
-    }
+  const updatedRegistration = await registrationRepository.updateById(
+    registrationId,
+    {
+      status: REGISTRATION_STATUS.REJECTED,
+      paymentStatus: PAYMENT_STATUS.FAILED,
+      rejectionReason: reason || "",
+    },
+  );
 
-    const updatedRegistration = await registrationRepository.updateById(
-      registrationId,
-      {
-        status: REGISTRATION_STATUS.REJECTED,
-        paymentStatus: PAYMENT_STATUS.FAILED,
-        rejectionReason: reason || ""
-      }
-    );
+  // Clean up the screenshot asset asynchronously
+  if (payment.screenshotPublicId) {
+    cloudinaryUtil.deleteAsset(payment.screenshotPublicId).catch((err) => {
+      logger.error(
+        `Non-blocking error during Cloudinary deletion for rejection: ${err.message}`,
+      );
+    });
+  }
 
-    // Clean up the screenshot asset asynchronously
-    if (payment.screenshotPublicId) {
-      cloudinaryUtil.deleteAsset(payment.screenshotPublicId).catch((err) => {
-        logger.error(`Non-blocking error during Cloudinary deletion for rejection: ${err.message}`);
-      });
-    }
-
-    return updatedRegistration;
-  };
+  return updatedRegistration;
+};
 
 /**
  * ============================================================
@@ -1373,54 +1099,34 @@ const rejectRegistration =
  * ============================================================
  */
 
-const checkInRegistration =
-  async (
-    registrationId,
-  ) => {
-    assertValidObjectId(
-      registrationId,
-      "Registration ID",
+const checkInRegistration = async (registrationId) => {
+  assertValidObjectId(registrationId, "Registration ID");
+
+  const registration = await registrationRepository.findById(registrationId);
+
+  if (!registration) {
+    throw new ApiError("Registration not found.", HTTP_STATUS.NOT_FOUND);
+  }
+
+  if (registration.status !== REGISTRATION_STATUS.REGISTERED) {
+    throw new ApiError(
+      "Only registered participants can be checked in.",
+      HTTP_STATUS.BAD_REQUEST,
     );
+  }
 
-    const registration =
-      await registrationRepository.findById(
-        registrationId,
-      );
-
-    if (!registration) {
-      throw new ApiError(
-        "Registration not found.",
-        HTTP_STATUS.NOT_FOUND,
-      );
-    }
-
-    if (
-      registration.status !==
-      REGISTRATION_STATUS.REGISTERED
-    ) {
-      throw new ApiError(
-        "Only registered participants can be checked in.",
-        HTTP_STATUS.BAD_REQUEST,
-      );
-    }
-
-    if (
-      registration.checkedIn
-    ) {
-      throw new ApiError(
-        "Participant is already checked in.",
-        HTTP_STATUS.CONFLICT,
-      );
-    }
-
-    return registrationRepository.updateById(
-      registrationId,
-      {
-        checkedIn: true,
-        checkedInAt: new Date(),
-      },
+  if (registration.checkedIn) {
+    throw new ApiError(
+      "Participant is already checked in.",
+      HTTP_STATUS.CONFLICT,
     );
-  };
+  }
+
+  return registrationRepository.updateById(registrationId, {
+    checkedIn: true,
+    checkedInAt: new Date(),
+  });
+};
 
 /**
  * ============================================================
@@ -1428,50 +1134,33 @@ const checkInRegistration =
  * ============================================================
  */
 
-const deleteRegistration =
-  async (
-    registrationId,
-  ) => {
-    assertValidObjectId(
-      registrationId,
-      "Registration ID",
+const deleteRegistration = async (registrationId) => {
+  assertValidObjectId(registrationId, "Registration ID");
+
+  const registration = await registrationRepository.findById(registrationId);
+
+  if (!registration) {
+    throw new ApiError("Registration not found.", HTTP_STATUS.NOT_FOUND);
+  }
+
+  if (
+    registration.paymentStatus === PAYMENT_STATUS.PAID ||
+    registration.paymentStatus === PAYMENT_STATUS.REFUNDED
+  ) {
+    throw new ApiError(
+      "Paid registrations cannot be permanently deleted.",
+      HTTP_STATUS.BAD_REQUEST,
     );
+  }
 
-    const registration =
-      await registrationRepository.findById(
-        registrationId,
-      );
+  await registrationRepository.deleteById(registrationId);
 
-    if (!registration) {
-      throw new ApiError(
-        "Registration not found.",
-        HTTP_STATUS.NOT_FOUND,
-      );
-    }
+  return {
+    success: true,
 
-    if (
-      registration.paymentStatus ===
-        PAYMENT_STATUS.PAID ||
-      registration.paymentStatus ===
-        PAYMENT_STATUS.REFUNDED
-    ) {
-      throw new ApiError(
-        "Paid registrations cannot be permanently deleted.",
-        HTTP_STATUS.BAD_REQUEST,
-      );
-    }
-
-    await registrationRepository.deleteById(
-      registrationId,
-    );
-
-    return {
-      success: true,
-
-      message:
-        "Registration deleted successfully.",
-    };
+    message: "Registration deleted successfully.",
   };
+};
 
 /**
  * ============================================================
@@ -1480,46 +1169,95 @@ const deleteRegistration =
  */
 
 const createPublicRegistration = async (guestData) => {
-  const { eventId, participantName, participantEmail, participantPhone, collegeId, department, yearOfStudy, teamName, projectTitle, members } = guestData;
+  const {
+    eventId,
+    participantName,
+    participantEmail,
+    participantPhone,
+    collegeId,
+    department,
+    yearOfStudy,
+    teamName,
+    projectTitle,
+    members,
+  } = guestData;
 
   const event = await validateEventForRegistration(eventId);
 
   let participantCount = 1;
 
   if (event.type === EVENT_TYPES.INDIVIDUAL && teamName) {
-    throw new ApiError("Team registration is not allowed for this event.", HTTP_STATUS.BAD_REQUEST);
+    throw new ApiError(
+      "Team registration is not allowed for this event.",
+      HTTP_STATUS.BAD_REQUEST,
+    );
   }
 
-  if (event.type === EVENT_TYPES.TEAM || (event.type === EVENT_TYPES.INDIVIDUAL_OR_TEAM && teamName)) {
-    if (!teamName || !members || !Array.isArray(members) || members.length < 1) {
-      throw new ApiError("Team name and members are required for team events.", HTTP_STATUS.BAD_REQUEST);
+  if (
+    event.type === EVENT_TYPES.TEAM ||
+    (event.type === EVENT_TYPES.INDIVIDUAL_OR_TEAM && teamName)
+  ) {
+    if (
+      !teamName ||
+      !members ||
+      !Array.isArray(members) ||
+      members.length < 1
+    ) {
+      throw new ApiError(
+        "Team name and members are required for team events.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
     }
-    
+
     const lowerTitle = event.title?.toLowerCase() || "";
-    const requiresProjectTitle = lowerTitle.includes("paper") || lowerTitle.includes("poster") || lowerTitle.includes("hardware");
-    
+    const requiresProjectTitle =
+      lowerTitle.includes("paper") ||
+      lowerTitle.includes("poster") ||
+      lowerTitle.includes("hardware");
+
     if (requiresProjectTitle && (!projectTitle || !projectTitle.trim())) {
-      throw new ApiError("Project / Topic Title is required for this event.", HTTP_STATUS.BAD_REQUEST);
+      throw new ApiError(
+        "Project / Topic Title is required for this event.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
     }
 
     const configuredTeamSize = Number(event.teamSize);
-    const maxTeamSize = Number.isFinite(configuredTeamSize) && configuredTeamSize > 0 ? Math.min(configuredTeamSize, 3) : 3;
+    const maxTeamSize =
+      Number.isFinite(configuredTeamSize) && configuredTeamSize > 0
+        ? Math.min(configuredTeamSize, 3)
+        : 3;
 
     if (members.length > maxTeamSize) {
-      throw new ApiError(`Team exceeds the maximum team size of ${maxTeamSize}.`, HTTP_STATUS.BAD_REQUEST);
+      throw new ApiError(
+        `Team exceeds the maximum team size of ${maxTeamSize}.`,
+        HTTP_STATUS.BAD_REQUEST,
+      );
     }
 
     // Duplicate check for team name
-    const existingTeam = await teamRepository.findByEventAndName(event._id, teamName);
+    const existingTeam = await teamRepository.findByEventAndName(
+      event._id,
+      teamName,
+    );
     if (existingTeam) {
-      throw new ApiError("A team with this name is already registered for this event.", HTTP_STATUS.CONFLICT);
+      throw new ApiError(
+        "A team with this name is already registered for this event.",
+        HTTP_STATUS.CONFLICT,
+      );
     }
 
     // Duplicate check for team leader email
     const leaderEmail = participantEmail;
-    const isRegistered = await teamRepository.findActiveByLeaderEmailAndEvent(event._id, leaderEmail);
+    const isRegistered = await teamRepository.findActiveByLeaderEmailAndEvent(
+      event._id,
+      leaderEmail,
+    );
     if (isRegistered) {
-      throw new ApiError(`Participant with email ${leaderEmail} has already created a team for this event.`, HTTP_STATUS.CONFLICT);
+      throw new ApiError(
+        `Participant with email ${leaderEmail} has already created a team for this event.`,
+        HTTP_STATUS.CONFLICT,
+      );
     }
 
     participantCount = members.length;
@@ -1530,7 +1268,7 @@ const createPublicRegistration = async (guestData) => {
       session.startTransaction();
 
       const inviteCode = "PUBLIC" + Math.floor(1000 + Math.random() * 9000); // Dummy for public
-      const team = new mongoose.model('Team')({
+      const team = new mongoose.model("Team")({
         teamName: teamName.trim(),
         projectTitle: projectTitle ? projectTitle.trim() : "",
         event: event._id,
@@ -1545,14 +1283,17 @@ const createPublicRegistration = async (guestData) => {
           collegeId: m.collegeId,
           department: m.department,
           yearOfStudy: m.yearOfStudy,
-          role: index === 0 ? TEAM_MEMBER_ROLE.LEADER : TEAM_MEMBER_ROLE.MEMBER
-        }))
+          role: index === 0 ? TEAM_MEMBER_ROLE.LEADER : TEAM_MEMBER_ROLE.MEMBER,
+        })),
       });
 
       await team.save({ session });
 
       const rawToken = crypto.randomBytes(32).toString("hex");
-      const guestTokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+      const guestTokenHash = crypto
+        .createHash("sha256")
+        .update(rawToken)
+        .digest("hex");
       const guestTokenExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
 
       const registrationData = {
@@ -1567,16 +1308,18 @@ const createPublicRegistration = async (guestData) => {
         festival: getFestivalId(event),
         team: team._id,
         status: REGISTRATION_STATUS.PENDING, // Payment is phase 4, but we keep it pending so user can pay later. Wait, for free events it's REGISTERED.
-        paymentStatus: event.isPaid ? PAYMENT_STATUS.PENDING : PAYMENT_STATUS.NOT_REQUIRED,
+        paymentStatus: event.isPaid
+          ? PAYMENT_STATUS.PENDING
+          : PAYMENT_STATUS.NOT_REQUIRED,
         guestTokenHash,
         guestTokenExpiresAt,
       };
-      
+
       if (!event.isPaid) {
-          registrationData.status = REGISTRATION_STATUS.REGISTERED;
+        registrationData.status = REGISTRATION_STATUS.REGISTERED;
       }
 
-      const registration = new mongoose.model('Registration')(registrationData);
+      const registration = new mongoose.model("Registration")(registrationData);
       await registration.save({ session });
 
       if (event.isPaid) {
@@ -1591,7 +1334,7 @@ const createPublicRegistration = async (guestData) => {
           screenshotPublicId: null,
           status: PAYMENT_STATUS.PENDING,
         };
-        const payment = new mongoose.model('Payment')(paymentData);
+        const payment = new mongoose.model("Payment")(paymentData);
         await payment.save({ session });
       }
 
@@ -1611,21 +1354,33 @@ const createPublicRegistration = async (guestData) => {
       await session.abortTransaction();
       session.endSession();
       if (error.code === 11000) {
-        throw new ApiError("A conflicting registration was detected (duplicate name or email).", HTTP_STATUS.CONFLICT);
+        throw new ApiError(
+          "A conflicting registration was detected (duplicate name or email).",
+          HTTP_STATUS.CONFLICT,
+        );
       }
       throw error;
     }
-
   } else {
     // Individual Event Duplicate Check
-    const existingRegistration = await registrationRepository.findActiveByEmailAndEvent(participantEmail, event._id);
+    const existingRegistration =
+      await registrationRepository.findActiveByEmailAndEvent(
+        participantEmail,
+        event._id,
+      );
 
     if (existingRegistration) {
-      throw new ApiError("You are already registered for this event.", HTTP_STATUS.CONFLICT);
+      throw new ApiError(
+        "You are already registered for this event.",
+        HTTP_STATUS.CONFLICT,
+      );
     }
 
     const rawToken = crypto.randomBytes(32).toString("hex");
-    const guestTokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+    const guestTokenHash = crypto
+      .createHash("sha256")
+      .update(rawToken)
+      .digest("hex");
     const guestTokenExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
 
     const registrationData = {
@@ -1640,8 +1395,12 @@ const createPublicRegistration = async (guestData) => {
       festival: getFestivalId(event),
       team: null,
       projectTitle: projectTitle ? projectTitle.trim() : "",
-      status: event.isPaid ? REGISTRATION_STATUS.PENDING : REGISTRATION_STATUS.REGISTERED,
-      paymentStatus: event.isPaid ? PAYMENT_STATUS.PENDING : PAYMENT_STATUS.NOT_REQUIRED,
+      status: event.isPaid
+        ? REGISTRATION_STATUS.PENDING
+        : REGISTRATION_STATUS.REGISTERED,
+      paymentStatus: event.isPaid
+        ? PAYMENT_STATUS.PENDING
+        : PAYMENT_STATUS.NOT_REQUIRED,
       guestTokenHash,
       guestTokenExpiresAt,
     };
@@ -1651,7 +1410,10 @@ const createPublicRegistration = async (guestData) => {
       registration = await registrationRepository.create(registrationData);
     } catch (error) {
       if (error.code === 11000) {
-        throw new ApiError("You are already registered for this event.", HTTP_STATUS.CONFLICT);
+        throw new ApiError(
+          "You are already registered for this event.",
+          HTTP_STATUS.CONFLICT,
+        );
       }
       throw error;
     }
@@ -1697,7 +1459,7 @@ const retryTicketGeneration = async (registrationId) => {
     .populate("event")
     .populate({
       path: "team",
-      populate: { path: "members" }
+      populate: { path: "members" },
     });
 
   if (!registration) {
@@ -1705,12 +1467,17 @@ const retryTicketGeneration = async (registrationId) => {
   }
 
   if (registration.paymentStatus !== PAYMENT_STATUS.PAID) {
-    throw new ApiError("Cannot generate tickets for unpaid registration.", HTTP_STATUS.BAD_REQUEST);
+    throw new ApiError(
+      "Cannot generate tickets for unpaid registration.",
+      HTTP_STATUS.BAD_REQUEST,
+    );
   }
 
   // Generate or fetch existing tickets
   const ticketService = await import("../services/ticket.service.js");
-  const tickets = await ticketService.default.createTicketsForRegistration(registration._id);
+  const tickets = await ticketService.default.createTicketsForRegistration(
+    registration._id,
+  );
 
   // Re-send emails
   try {
@@ -1719,13 +1486,16 @@ const retryTicketGeneration = async (registrationId) => {
       if (ticket._isRecovered) {
         continue; // Skip sending duplicate email for a ticket that already existed
       }
-      
+
       let recipientEmail = null;
       let participantName = null;
       if (registration.event.type === EVENT_TYPES.INDIVIDUAL) {
         recipientEmail = registration.participantEmail;
         participantName = registration.participantName || "Participant";
-      } else if (registration.event.type === EVENT_TYPES.TEAM && ticket.teamMemberId) {
+      } else if (
+        registration.event.type === EVENT_TYPES.TEAM &&
+        ticket.teamMemberId
+      ) {
         const member = registration.team.members.id(ticket.teamMemberId);
         if (member) {
           recipientEmail = member.participantEmail;
@@ -1745,47 +1515,191 @@ const retryTicketGeneration = async (registrationId) => {
     }
 
     if (jobsData.length > 0) {
-      const emailJobRepository = (await import("../repositories/emailJob.repository.js")).default;
+      const emailJobRepository = (
+        await import("../repositories/emailJob.repository.js")
+      ).default;
       await emailJobRepository.createConfirmationJobs(jobsData);
     }
-    logger.info(`Recovery: Registration confirmation emails sent successfully for registration ${registration._id}.`);
+    logger.info(
+      `Recovery: Registration confirmation emails sent successfully for registration ${registration._id}.`,
+    );
   } catch (emailError) {
     logger.error(
       `Recovery: Failed to send registration confirmation emails for registration ${registration._id}:`,
-      emailError
+      emailError,
     );
-    throw new ApiError("Tickets created/fetched, but emails failed to send.", HTTP_STATUS.INTERNAL_SERVER_ERROR);
+    throw new ApiError(
+      "Tickets created/fetched, but emails failed to send.",
+      HTTP_STATUS.INTERNAL_SERVER_ERROR,
+    );
   }
 
   return { ticketsCount: tickets.length };
 };
 
-const registrationService =
-  Object.freeze({
-    createRegistration,
-    createPublicRegistration,
+const generateAdminTicketPdf = async (registrationId, teamMemberId = null) => {
+  assertValidObjectId(registrationId, "Registration ID");
 
-    getAllRegistrations,
-    getRegistrationById,
+  const Registration = mongoose.model("Registration");
+  const registration = await Registration.findById(registrationId)
+    .populate("event")
+    .populate("festival")
+    .populate("team")
+    .populate("user")
+    .lean()
+    .exec();
 
-    getMyRegistrations,
-    getRegistrationsByEvent,
-    getRegistrationsByFestival,
-    getRegistrationsByTeam,
+  if (!registration) {
+    throw new ApiError("Registration not found.", HTTP_STATUS.NOT_FOUND);
+  }
 
-    cancelRegistration,
+  const payment = await paymentRepository.findByRegistration(registrationId);
+  if (!payment || payment.status !== PAYMENT_STATUS.PAID) {
+    throw new ApiError("Registration is not paid.", HTTP_STATUS.BAD_REQUEST);
+  }
 
-    updateRegistrationStatus,
-    updatePaymentStatus,
+  let ticket;
+  if (
+    registration.event.type === EVENT_TYPES.TEAM ||
+    (registration.event.type === EVENT_TYPES.INDIVIDUAL_OR_TEAM &&
+      registration.team)
+  ) {
+    if (!teamMemberId) {
+      throw new ApiError(
+        "Team member ID is required for team registrations.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+    assertValidObjectId(teamMemberId, "Team Member ID");
+    const tickets = await ticketService.createTicketsForRegistration(registrationId);
+    ticket = tickets.find((t) => t.teamMemberId?.toString() === teamMemberId.toString());
+  } else {
+    const tickets = await ticketService.createTicketsForRegistration(registrationId);
+    ticket = tickets[0];
+  }
 
-    getPaymentByRegistration,
-    approveRegistration,
-    rejectRegistration,
+  if (!ticket) {
+    throw new ApiError(
+      "Ticket not found. Registration may not be fully processed.",
+      HTTP_STATUS.NOT_FOUND,
+    );
+  }
 
-    checkInRegistration,
-
-    deleteRegistration,
-    retryTicketGeneration,
+  const pdfBuffer = await receiptUtil.generateRegistrationPDF({
+    payment,
+    registration,
+    ticket,
   });
+
+  let filename = `SCINTILLACE_Ticket_${ticket.ticketNumber}.pdf`;
+  if (ticket.teamMemberId && registration.team) {
+    const member = registration.team.members.find(
+      (m) => m._id.toString() === ticket.teamMemberId.toString(),
+    );
+    if (member && member.participantName) {
+      filename = `SCINTILLACE_Ticket_${member.participantName.replace(/[^a-zA-Z0-9]/g, "_")}.pdf`;
+    }
+  } else if (registration.participantName) {
+    filename = `SCINTILLACE_Ticket_${registration.participantName.replace(/[^a-zA-Z0-9]/g, "_")}.pdf`;
+  }
+
+  return { pdfBuffer, filename };
+};
+
+const generateAdminTeamTicketsZip = async (registrationId) => {
+  assertValidObjectId(registrationId, "Registration ID");
+
+  const Registration = mongoose.model("Registration");
+  const registration = await Registration.findById(registrationId)
+    .populate("event")
+    .populate("festival")
+    .populate("team")
+    .populate("user")
+    .lean()
+    .exec();
+
+  if (!registration) {
+    throw new ApiError("Registration not found.", HTTP_STATUS.NOT_FOUND);
+  }
+
+  if (
+    registration.event.type === EVENT_TYPES.INDIVIDUAL ||
+    !registration.team
+  ) {
+    throw new ApiError(
+      "This is not a team registration.",
+      HTTP_STATUS.BAD_REQUEST,
+    );
+  }
+
+  const payment = await paymentRepository.findByRegistration(registrationId);
+  if (!payment || payment.status !== PAYMENT_STATUS.PAID) {
+    throw new ApiError("Registration is not paid.", HTTP_STATUS.BAD_REQUEST);
+  }
+
+  const tickets = await ticketService.createTicketsForRegistration(registrationId);
+
+  if (!tickets || tickets.length === 0) {
+    throw new ApiError(
+      "No tickets found or generated for this registration.",
+      HTTP_STATUS.NOT_FOUND,
+    );
+  }
+
+  const zip = new AdmZip();
+
+  for (const member of registration.team.members) {
+    const ticket = tickets.find((t) => t.teamMemberId?.toString() === member._id.toString());
+    if (!ticket) continue;
+
+    const pdfBuffer = await receiptUtil.generateRegistrationPDF({
+      payment,
+      registration,
+      ticket,
+    });
+
+    const memberName = member.participantName || "Member";
+    const safeName = memberName.replace(/[^a-zA-Z0-9]/g, "_");
+    zip.addFile(`${safeName}_Ticket.pdf`, pdfBuffer);
+  }
+
+  const zipBuffer = zip.toBuffer();
+  const safeTeamName = (registration.team.teamName || "Team").replace(
+    /[^a-zA-Z0-9]/g,
+    "_",
+  );
+  const filename = `SCINTILLACE_Tickets_${safeTeamName}.zip`;
+
+  return { zipBuffer, filename };
+};
+
+const registrationService = Object.freeze({
+  createRegistration,
+  createPublicRegistration,
+
+  getAllRegistrations,
+  getRegistrationById,
+
+  getMyRegistrations,
+  getRegistrationsByEvent,
+  getRegistrationsByFestival,
+  getRegistrationsByTeam,
+
+  cancelRegistration,
+
+  updateRegistrationStatus,
+  updatePaymentStatus,
+
+  getPaymentByRegistration,
+  approveRegistration,
+  rejectRegistration,
+
+  checkInRegistration,
+
+  deleteRegistration,
+  retryTicketGeneration,
+  generateAdminTicketPdf,
+  generateAdminTeamTicketsZip,
+});
 
 export default registrationService;

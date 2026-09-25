@@ -16,38 +16,32 @@ import HTTP_STATUS from "../constants/httpStatus.js";
  * ============================================================
  */
 
-const createRegistration = asyncHandler(
-  async (req, res) => {
-    const {
-      event,
-      teamId = null,
-      screenshotUrl = null,
-      screenshotPublicId = null,
-    } = req.body;
+const createRegistration = asyncHandler(async (req, res) => {
+  const {
+    event,
+    teamId = null,
+    screenshotUrl = null,
+    screenshotPublicId = null,
+  } = req.body;
 
-    const result =
-      await registrationService.createRegistration(
-        req.user._id,
-        event,
-        teamId,
-        screenshotUrl,
-        screenshotPublicId,
-      );
+  const result = await registrationService.createRegistration(
+    req.user._id,
+    event,
+    teamId,
+    screenshotUrl,
+    screenshotPublicId,
+  );
 
-    return res
-      .status(HTTP_STATUS.CREATED)
-      .json({
-        success: true,
+  return res.status(HTTP_STATUS.CREATED).json({
+    success: true,
 
-        message:
-          result.paymentRequired
-            ? "Registration submitted. Your payment is pending verification."
-            : "Registration created successfully.",
+    message: result.paymentRequired
+      ? "Registration submitted. Your payment is pending verification."
+      : "Registration created successfully.",
 
-        data: result,
-      });
-  },
-);
+    data: result,
+  });
+});
 
 /**
  * ============================================================
@@ -87,14 +81,16 @@ const getPublicRegistrationStatus = asyncHandler(async (req, res) => {
       participantName: registration.participantName,
       status: registration.status,
       paymentStatus: registration.paymentStatus,
-      event: registration.event ? {
-        name: registration.event.name,
-        type: registration.event.type,
-        registrationFee: registration.event.registrationFee,
-        currency: registration.event.currency
-      } : null,
-      team: registration.team
-    }
+      event: registration.event
+        ? {
+            name: registration.event.name,
+            type: registration.event.type,
+            registrationFee: registration.event.registrationFee,
+            currency: registration.event.currency,
+          }
+        : null,
+      team: registration.team,
+    },
   });
 });
 
@@ -105,56 +101,44 @@ const getPublicRegistrationStatus = asyncHandler(async (req, res) => {
  * ============================================================
  */
 
-const getAllRegistrations =
-  asyncHandler(
-    async (req, res) => {
-      const page =
-        Number(req.query.page) || 1;
+const getAllRegistrations = asyncHandler(async (req, res) => {
+  const page = Number(req.query.page) || 1;
 
-      const limit =
-        Number(req.query.limit) || 10;
+  const limit = Number(req.query.limit) || 10;
 
-      const filter = {};
-      if (req.query.status) {
-        filter.status = req.query.status;
-      }
-      if (req.query.paymentStatus) {
-        filter.paymentStatus = req.query.paymentStatus;
-      }
-      if (req.query.event) {
-        filter.event = req.query.event;
-      }
-      if (req.query.festival) {
-        filter.festival = req.query.festival;
-      }
-      if (req.query.team) {
-        filter.team = req.query.team;
-      }
+  const filter = {};
+  if (req.query.status) {
+    filter.status = req.query.status;
+  }
+  if (req.query.paymentStatus) {
+    filter.paymentStatus = req.query.paymentStatus;
+  }
+  if (req.query.event) {
+    filter.event = req.query.event;
+  }
+  if (req.query.festival) {
+    filter.festival = req.query.festival;
+  }
+  if (req.query.team) {
+    filter.team = req.query.team;
+  }
 
-      const result =
-        await registrationService.getAllRegistrations(
-          {
-            page,
-            limit,
-            filter,
-          },
-        );
+  const result = await registrationService.getAllRegistrations({
+    page,
+    limit,
+    filter,
+  });
 
-      return res
-        .status(HTTP_STATUS.OK)
-        .json({
-          success: true,
+  return res.status(HTTP_STATUS.OK).json({
+    success: true,
 
-          data: {
-            registrations:
-              result.registrations,
+    data: {
+      registrations: result.registrations,
 
-            pagination:
-              result.pagination,
-          },
-        });
+      pagination: result.pagination,
     },
-  );
+  });
+});
 
 /**
  * ============================================================
@@ -163,27 +147,21 @@ const getAllRegistrations =
  * ============================================================
  */
 
-const getRegistrationById =
-  asyncHandler(
-    async (req, res) => {
-      const registration =
-        await registrationService.getRegistrationById(
-          req.params.id,
-          req.user._id,
-          req.user.role,
-        );
-
-      return res
-        .status(HTTP_STATUS.OK)
-        .json({
-          success: true,
-
-          data: {
-            registration,
-          },
-        });
-    },
+const getRegistrationById = asyncHandler(async (req, res) => {
+  const registration = await registrationService.getRegistrationById(
+    req.params.id,
+    req.user._id,
+    req.user.role,
   );
+
+  return res.status(HTTP_STATUS.OK).json({
+    success: true,
+
+    data: {
+      registration,
+    },
+  });
+});
 
 /**
  * ============================================================
@@ -192,35 +170,27 @@ const getRegistrationById =
  * ============================================================
  */
 
-const getMyRegistrations =
-  asyncHandler(
-    async (req, res) => {
-      const page =
-        Number(req.query.page) || 1;
+const getMyRegistrations = asyncHandler(async (req, res) => {
+  const page = Number(req.query.page) || 1;
 
-      const limit =
-        Number(req.query.limit) || 10;
+  const limit = Number(req.query.limit) || 10;
 
-      const registrations =
-        await registrationService.getMyRegistrations(
-          req.user._id,
-          {
-            page,
-            limit,
-          },
-        );
-
-      return res
-        .status(HTTP_STATUS.OK)
-        .json({
-          success: true,
-
-          data: {
-            registrations,
-          },
-        });
+  const registrations = await registrationService.getMyRegistrations(
+    req.user._id,
+    {
+      page,
+      limit,
     },
   );
+
+  return res.status(HTTP_STATUS.OK).json({
+    success: true,
+
+    data: {
+      registrations,
+    },
+  });
+});
 
 /**
  * ============================================================
@@ -229,35 +199,27 @@ const getMyRegistrations =
  * ============================================================
  */
 
-const getRegistrationsByEvent =
-  asyncHandler(
-    async (req, res) => {
-      const page =
-        Number(req.query.page) || 1;
+const getRegistrationsByEvent = asyncHandler(async (req, res) => {
+  const page = Number(req.query.page) || 1;
 
-      const limit =
-        Number(req.query.limit) || 10;
+  const limit = Number(req.query.limit) || 10;
 
-      const registrations =
-        await registrationService.getRegistrationsByEvent(
-          req.params.eventId,
-          {
-            page,
-            limit,
-          },
-        );
-
-      return res
-        .status(HTTP_STATUS.OK)
-        .json({
-          success: true,
-
-          data: {
-            registrations,
-          },
-        });
+  const registrations = await registrationService.getRegistrationsByEvent(
+    req.params.eventId,
+    {
+      page,
+      limit,
     },
   );
+
+  return res.status(HTTP_STATUS.OK).json({
+    success: true,
+
+    data: {
+      registrations,
+    },
+  });
+});
 
 /**
  * ============================================================
@@ -266,35 +228,27 @@ const getRegistrationsByEvent =
  * ============================================================
  */
 
-const getRegistrationsByFestival =
-  asyncHandler(
-    async (req, res) => {
-      const page =
-        Number(req.query.page) || 1;
+const getRegistrationsByFestival = asyncHandler(async (req, res) => {
+  const page = Number(req.query.page) || 1;
 
-      const limit =
-        Number(req.query.limit) || 10;
+  const limit = Number(req.query.limit) || 10;
 
-      const registrations =
-        await registrationService.getRegistrationsByFestival(
-          req.params.festivalId,
-          {
-            page,
-            limit,
-          },
-        );
-
-      return res
-        .status(HTTP_STATUS.OK)
-        .json({
-          success: true,
-
-          data: {
-            registrations,
-          },
-        });
+  const registrations = await registrationService.getRegistrationsByFestival(
+    req.params.festivalId,
+    {
+      page,
+      limit,
     },
   );
+
+  return res.status(HTTP_STATUS.OK).json({
+    success: true,
+
+    data: {
+      registrations,
+    },
+  });
+});
 
 /**
  * ============================================================
@@ -303,35 +257,27 @@ const getRegistrationsByFestival =
  * ============================================================
  */
 
-const getRegistrationsByTeam =
-  asyncHandler(
-    async (req, res) => {
-      const page =
-        Number(req.query.page) || 1;
+const getRegistrationsByTeam = asyncHandler(async (req, res) => {
+  const page = Number(req.query.page) || 1;
 
-      const limit =
-        Number(req.query.limit) || 10;
+  const limit = Number(req.query.limit) || 10;
 
-      const registrations =
-        await registrationService.getRegistrationsByTeam(
-          req.params.teamId,
-          {
-            page,
-            limit,
-          },
-        );
-
-      return res
-        .status(HTTP_STATUS.OK)
-        .json({
-          success: true,
-
-          data: {
-            registrations,
-          },
-        });
+  const registrations = await registrationService.getRegistrationsByTeam(
+    req.params.teamId,
+    {
+      page,
+      limit,
     },
   );
+
+  return res.status(HTTP_STATUS.OK).json({
+    success: true,
+
+    data: {
+      registrations,
+    },
+  });
+});
 
 /**
  * ============================================================
@@ -343,29 +289,22 @@ const getRegistrationsByTeam =
  * ============================================================
  */
 
-const cancelRegistration =
-  asyncHandler(
-    async (req, res) => {
-      const registration =
-        await registrationService.cancelRegistration(
-          req.params.id,
-          req.user._id,
-        );
-
-      return res
-        .status(HTTP_STATUS.OK)
-        .json({
-          success: true,
-
-          message:
-            "Registration cancelled successfully.",
-
-          data: {
-            registration,
-          },
-        });
-    },
+const cancelRegistration = asyncHandler(async (req, res) => {
+  const registration = await registrationService.cancelRegistration(
+    req.params.id,
+    req.user._id,
   );
+
+  return res.status(HTTP_STATUS.OK).json({
+    success: true,
+
+    message: "Registration cancelled successfully.",
+
+    data: {
+      registration,
+    },
+  });
+});
 
 /**
  * ============================================================
@@ -374,29 +313,22 @@ const cancelRegistration =
  * ============================================================
  */
 
-const updateRegistrationStatus =
-  asyncHandler(
-    async (req, res) => {
-      const registration =
-        await registrationService.updateRegistrationStatus(
-          req.params.id,
-          req.body.status,
-        );
-
-      return res
-        .status(HTTP_STATUS.OK)
-        .json({
-          success: true,
-
-          message:
-            "Registration status updated successfully.",
-
-          data: {
-            registration,
-          },
-        });
-    },
+const updateRegistrationStatus = asyncHandler(async (req, res) => {
+  const registration = await registrationService.updateRegistrationStatus(
+    req.params.id,
+    req.body.status,
   );
+
+  return res.status(HTTP_STATUS.OK).json({
+    success: true,
+
+    message: "Registration status updated successfully.",
+
+    data: {
+      registration,
+    },
+  });
+});
 
 /**
  * ============================================================
@@ -407,29 +339,22 @@ const updateRegistrationStatus =
  * ============================================================
  */
 
-const updatePaymentStatus =
-  asyncHandler(
-    async (req, res) => {
-      const registration =
-        await registrationService.updatePaymentStatus(
-          req.params.id,
-          req.body.paymentStatus,
-        );
-
-      return res
-        .status(HTTP_STATUS.OK)
-        .json({
-          success: true,
-
-          message:
-            "Payment status updated successfully.",
-
-          data: {
-            registration,
-          },
-        });
-    },
+const updatePaymentStatus = asyncHandler(async (req, res) => {
+  const registration = await registrationService.updatePaymentStatus(
+    req.params.id,
+    req.body.paymentStatus,
   );
+
+  return res.status(HTTP_STATUS.OK).json({
+    success: true,
+
+    message: "Payment status updated successfully.",
+
+    data: {
+      registration,
+    },
+  });
+});
 
 /**
  * ============================================================
@@ -438,28 +363,21 @@ const updatePaymentStatus =
  * ============================================================
  */
 
-const checkInRegistration =
-  asyncHandler(
-    async (req, res) => {
-      const registration =
-        await registrationService.checkInRegistration(
-          req.params.id,
-        );
-
-      return res
-        .status(HTTP_STATUS.OK)
-        .json({
-          success: true,
-
-          message:
-            "Participant checked in successfully.",
-
-          data: {
-            registration,
-          },
-        });
-    },
+const checkInRegistration = asyncHandler(async (req, res) => {
+  const registration = await registrationService.checkInRegistration(
+    req.params.id,
   );
+
+  return res.status(HTTP_STATUS.OK).json({
+    success: true,
+
+    message: "Participant checked in successfully.",
+
+    data: {
+      registration,
+    },
+  });
+});
 
 /**
  * ============================================================
@@ -470,24 +388,15 @@ const checkInRegistration =
  * ============================================================
  */
 
-const deleteRegistration =
-  asyncHandler(
-    async (req, res) => {
-      const result =
-        await registrationService.deleteRegistration(
-          req.params.id,
-        );
+const deleteRegistration = asyncHandler(async (req, res) => {
+  const result = await registrationService.deleteRegistration(req.params.id);
 
-      return res
-        .status(HTTP_STATUS.OK)
-        .json({
-          success: true,
+  return res.status(HTTP_STATUS.OK).json({
+    success: true,
 
-          message:
-            result.message,
-        });
-    },
-  );
+    message: result.message,
+  });
+});
 
 /**
  * ============================================================
@@ -514,8 +423,8 @@ const approveRegistration = asyncHandler(async (req, res) => {
     req.user._id,
     {
       manualVerification: req.body.manualVerification,
-      adminNote: req.body.adminNote
-    }
+      adminNote: req.body.adminNote,
+    },
   );
 
   return res.status(HTTP_STATUS.OK).json({
@@ -532,7 +441,7 @@ const rejectRegistration = asyncHandler(async (req, res) => {
     req.params.id,
     req.user._id,
     req.body.rejectionReason,
-    req.body.adminNote
+    req.body.adminNote,
   );
 
   return res.status(HTTP_STATUS.OK).json({
@@ -568,42 +477,68 @@ const retryTicketGeneration = asyncHandler(async (req, res) => {
   });
 });
 
-const registrationController =
-  Object.freeze({
-    createRegistration,
-    createPublicRegistration,
+const downloadTicketPdf = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { teamMemberId } = req.query;
 
-    getAllRegistrations,
+  const { pdfBuffer, filename } =
+    await registrationService.generateAdminTicketPdf(id, teamMemberId);
 
-    getRegistrationById,
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
 
-    getMyRegistrations,
+  return res.status(HTTP_STATUS.OK).send(pdfBuffer);
+});
 
-    getRegistrationsByEvent,
+const downloadTeamTicketsZip = asyncHandler(async (req, res) => {
+  const { id } = req.params;
 
-    getRegistrationsByFestival,
+  const { zipBuffer, filename } =
+    await registrationService.generateAdminTeamTicketsZip(id);
 
-    getRegistrationsByTeam,
+  res.setHeader("Content-Type", "application/zip");
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
 
-    cancelRegistration,
+  return res.status(HTTP_STATUS.OK).send(zipBuffer);
+});
 
-    updateRegistrationStatus,
+const registrationController = Object.freeze({
+  createRegistration,
+  createPublicRegistration,
 
-    updatePaymentStatus,
+  getAllRegistrations,
 
-    getPaymentByRegistration,
+  getRegistrationById,
 
-    approveRegistration,
+  getMyRegistrations,
 
-    rejectRegistration,
+  getRegistrationsByEvent,
 
-    checkInRegistration,
+  getRegistrationsByFestival,
 
-    deleteRegistration,
+  getRegistrationsByTeam,
 
-    getPublicRegistrationStatus,
+  cancelRegistration,
 
-    retryTicketGeneration,
-  });
+  updateRegistrationStatus,
+
+  updatePaymentStatus,
+
+  getPaymentByRegistration,
+
+  approveRegistration,
+
+  rejectRegistration,
+
+  checkInRegistration,
+
+  deleteRegistration,
+
+  getPublicRegistrationStatus,
+
+  retryTicketGeneration,
+  downloadTicketPdf,
+  downloadTeamTicketsZip,
+});
 
 export default registrationController;

@@ -52,10 +52,7 @@ const router = express.Router();
 router.post(
   "/",
   authenticate,
-  authorize(
-    ROLES.STUDENT,
-    ROLES.SUPER_ADMIN,
-  ),
+  authorize(ROLES.STUDENT, ROLES.SUPER_ADMIN),
   ...createRegistrationValidator,
   validateRequest,
   registrationController.createRegistration,
@@ -74,9 +71,10 @@ const publicRegistrationLimiter = rateLimit({
   legacyHeaders: false,
   message: {
     success: false,
-    message: "Too many registrations from this IP, please try again after 15 minutes.",
+    message:
+      "Too many registrations from this IP, please try again after 15 minutes.",
   },
-  skip: () => process.env.NODE_ENV === "test"
+  skip: () => process.env.NODE_ENV === "test",
 });
 
 /**
@@ -101,7 +99,7 @@ const publicStatusLimiter = rateLimit({
     success: false,
     message: "Too many status checks from this IP, please try again later.",
   },
-  skip: () => process.env.NODE_ENV === "test"
+  skip: () => process.env.NODE_ENV === "test",
 });
 
 /**
@@ -130,10 +128,7 @@ router.get(
 router.get(
   "/my",
   authenticate,
-  authorize(
-    ROLES.STUDENT,
-    ROLES.SUPER_ADMIN,
-  ),
+  authorize(ROLES.STUDENT, ROLES.SUPER_ADMIN),
   ...registrationQueryValidator,
   validateRequest,
   registrationController.getMyRegistrations,
@@ -174,10 +169,7 @@ router.get(
 router.post(
   "/:id/cancel",
   authenticate,
-  authorize(
-    ROLES.STUDENT,
-    ROLES.SUPER_ADMIN,
-  ),
+  authorize(ROLES.STUDENT, ROLES.SUPER_ADMIN),
   ...registrationIdValidator,
   validateRequest,
   registrationController.cancelRegistration,
@@ -197,10 +189,7 @@ router.post(
 router.get(
   "/",
   authenticate,
-  authorize(
-    ROLES.SUPER_ADMIN,
-    ROLES.FACULTY,
-  ),
+  authorize(ROLES.SUPER_ADMIN, ROLES.FACULTY),
   ...registrationQueryValidator,
   validateRequest,
   registrationController.getAllRegistrations,
@@ -214,10 +203,7 @@ router.get(
 router.get(
   "/event/:eventId",
   authenticate,
-  authorize(
-    ROLES.SUPER_ADMIN,
-    ROLES.FACULTY,
-  ),
+  authorize(ROLES.SUPER_ADMIN, ROLES.FACULTY),
   ...eventIdValidator,
   ...registrationQueryValidator,
   validateRequest,
@@ -232,10 +218,7 @@ router.get(
 router.get(
   "/festival/:festivalId",
   authenticate,
-  authorize(
-    ROLES.SUPER_ADMIN,
-    ROLES.FACULTY,
-  ),
+  authorize(ROLES.SUPER_ADMIN, ROLES.FACULTY),
   ...festivalIdValidator,
   ...registrationQueryValidator,
   validateRequest,
@@ -250,10 +233,7 @@ router.get(
 router.get(
   "/team/:teamId",
   authenticate,
-  authorize(
-    ROLES.SUPER_ADMIN,
-    ROLES.FACULTY,
-  ),
+  authorize(ROLES.SUPER_ADMIN, ROLES.FACULTY),
   ...teamIdValidator,
   ...registrationQueryValidator,
   validateRequest,
@@ -274,10 +254,7 @@ router.get(
 router.patch(
   "/:id/status",
   authenticate,
-  authorize(
-    ROLES.SUPER_ADMIN,
-    ROLES.FACULTY,
-  ),
+  authorize(ROLES.SUPER_ADMIN, ROLES.FACULTY),
   ...registrationIdValidator,
   ...updateRegistrationStatusValidator,
   validateRequest,
@@ -308,17 +285,14 @@ router.patch(
 
 /**
  * POST /api/v1/registrations/:id/retry-tickets
- * 
+ *
  * Safely retry ticket and email generation for a registration
  * that is already in PAID status but failed to generate tickets.
  */
 router.post(
   "/:id/retry-tickets",
   authenticate,
-  authorize(
-    ROLES.SUPER_ADMIN,
-    ROLES.FACULTY,
-  ),
+  authorize(ROLES.SUPER_ADMIN, ROLES.FACULTY),
   ...registrationIdValidator,
   validateRequest,
   registrationController.retryTicketGeneration,
@@ -326,10 +300,7 @@ router.post(
 router.patch(
   "/:id/payment-status",
   authenticate,
-  authorize(
-    ROLES.SUPER_ADMIN,
-    ROLES.FACULTY,
-  ),
+  authorize(ROLES.SUPER_ADMIN, ROLES.FACULTY),
   ...registrationIdValidator,
   ...updatePaymentStatusValidator,
   validateRequest,
@@ -350,10 +321,7 @@ router.patch(
 router.get(
   "/:id/payment",
   authenticate,
-  authorize(
-    ROLES.SUPER_ADMIN,
-    ROLES.FACULTY,
-  ),
+  authorize(ROLES.SUPER_ADMIN, ROLES.FACULTY),
   ...registrationIdValidator,
   validateRequest,
   registrationController.getPaymentByRegistration,
@@ -367,10 +335,7 @@ router.get(
 router.post(
   "/:id/approve",
   authenticate,
-  authorize(
-    ROLES.SUPER_ADMIN,
-    ROLES.FACULTY,
-  ),
+  authorize(ROLES.SUPER_ADMIN, ROLES.FACULTY),
   ...registrationIdValidator,
   validateRequest,
   registrationController.approveRegistration,
@@ -384,10 +349,7 @@ router.post(
 router.post(
   "/:id/reject",
   authenticate,
-  authorize(
-    ROLES.SUPER_ADMIN,
-    ROLES.FACULTY,
-  ),
+  authorize(ROLES.SUPER_ADMIN, ROLES.FACULTY),
   ...registrationIdValidator,
   ...rejectRegistrationValidator,
   validateRequest,
@@ -406,14 +368,42 @@ router.post(
 router.patch(
   "/:id/check-in",
   authenticate,
-  authorize(
-    ROLES.SUPER_ADMIN,
-    ROLES.FACULTY,
-    ROLES.VOLUNTEER,
-  ),
+  authorize(ROLES.SUPER_ADMIN, ROLES.FACULTY, ROLES.VOLUNTEER),
   ...registrationIdValidator,
   validateRequest,
   registrationController.checkInRegistration,
+);
+
+/**
+ * ============================================================
+ * Ticket Download
+ * ============================================================
+ */
+
+/**
+ * Download Ticket PDF
+ * GET /api/v1/registrations/:id/ticket-pdf
+ */
+router.get(
+  "/:id/ticket-pdf",
+  authenticate,
+  authorize(ROLES.SUPER_ADMIN, ROLES.FACULTY),
+  ...registrationIdValidator,
+  validateRequest,
+  registrationController.downloadTicketPdf,
+);
+
+/**
+ * Download All Team Tickets ZIP
+ * GET /api/v1/registrations/:id/team-tickets-zip
+ */
+router.get(
+  "/:id/team-tickets-zip",
+  authenticate,
+  authorize(ROLES.SUPER_ADMIN, ROLES.FACULTY),
+  ...registrationIdValidator,
+  validateRequest,
+  registrationController.downloadTeamTicketsZip,
 );
 
 /**
@@ -428,9 +418,7 @@ router.patch(
 router.delete(
   "/:id/permanent",
   authenticate,
-  authorize(
-    ROLES.SUPER_ADMIN,
-  ),
+  authorize(ROLES.SUPER_ADMIN),
   ...registrationIdValidator,
   validateRequest,
   registrationController.deleteRegistration,
