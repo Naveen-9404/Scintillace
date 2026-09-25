@@ -29,6 +29,9 @@ const transporter =
         process.env.SMTP_PASSWORD,
     },
 
+    // Force IPv4 to prevent ENETUNREACH on Render
+    family: 4,
+
     // Pooling for connection reuse
     pool: true,
     maxConnections: 2,

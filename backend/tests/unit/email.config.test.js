@@ -54,7 +54,12 @@ describe('Email Transport Configuration', () => {
     expect(config.socketTimeout).toBeDefined();
   });
 
-  it('5. email functions continue using the shared transporter', async () => {
+  it('5. explicitly configures family: 4 to prevent IPv6 ENETUNREACH', () => {
+    const config = mockCreateTransport.mock.calls[0][0];
+    expect(config.family).toBe(4);
+  });
+
+  it('6. email functions continue using the shared transporter', async () => {
     const transporterMock = mockCreateTransport.mock.results[0].value;
     
     // Call a function
