@@ -60,6 +60,7 @@ const sendRegistrationConfirmation =
     participantName,
     eventName,
     ticketNumber,
+    registrationId,
     pdfBuffer,
   }) => {
     if (!to) {
@@ -94,6 +95,10 @@ Your registration for ${
           eventName ||
           "the event"
         } has been successfully confirmed.
+
+Registration ID: ${
+          registrationId || "N/A"
+        }
 
 Ticket Number: ${
           ticketNumber || "N/A"
@@ -139,6 +144,16 @@ SCINTILLACE Team`,
               }
             </strong>
             has been successfully confirmed.
+          </p>
+
+          <p>
+            <strong>
+              Registration ID:
+            </strong>
+            ${
+              registrationId ||
+              "N/A"
+            }
           </p>
 
           <p>

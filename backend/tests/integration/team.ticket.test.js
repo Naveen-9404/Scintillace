@@ -14,6 +14,7 @@ const { default: request } = await import("supertest");
 const { default: Event } = await import("../../src/models/Event.js");
 const { default: Registration } = await import("../../src/models/Registration.js");
 const { default: Ticket } = await import("../../src/models/Ticket.js");
+const { default: EmailJob } = await import("../../src/models/EmailJob.js");
 const { EVENT_STATUS, EVENT_TYPES } = await import("../../src/constants/event.constants.js");
 const { PAYMENT_STATUS } = await import("../../src/constants/registration.constants.js");
 const { default: ticketService } = await import("../../src/services/ticket.service.js");
@@ -257,11 +258,13 @@ describe("Team Ticket and Guest Access Integration Tests", () => {
 
     // First generation (manual simulation)
     await registrationService.retryTicketGeneration(data.registration._id);
-    expect(emailUtil.sendRegistrationConfirmation).toHaveBeenCalledTimes(1);
+    let jobs = await EmailJob.find({ registration: data.registration._id });
+    expect(jobs.length).toBe(1);
     
     // Second generation (retry)
     await registrationService.retryTicketGeneration(data.registration._id);
     // Should still be 1! Because we flag recovered tickets to skip duplicate emails.
-    expect(emailUtil.sendRegistrationConfirmation).toHaveBeenCalledTimes(1);
+    jobs = await EmailJob.find({ registration: data.registration._id });
+    expect(jobs.length).toBe(1);
   });
 });

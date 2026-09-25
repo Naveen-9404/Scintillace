@@ -131,11 +131,6 @@ const generateRegistrationPDF =
      * ========================================================
      */
 
-    const user =
-      registration.user ||
-      ticket.user ||
-      {};
-
     const event =
       registration.event ||
       ticket.event ||
@@ -145,6 +140,43 @@ const generateRegistrationPDF =
       registration.festival ||
       ticket.festival ||
       {};
+
+    let participantName = "Participant";
+    let participantEmail = "";
+    let participantPhone = "";
+    let collegeId = "";
+    let department = "";
+    let yearOfStudy = "";
+    let projectTitle = "";
+    let teamName = "";
+    let teamRole = "";
+    const registrationId = registration._id || registration.id || "";
+
+    if (ticket.teamMemberId && registration.team && registration.team.members) {
+      const member = registration.team.members.find(
+        (m) => m._id?.toString() === ticket.teamMemberId?.toString()
+      );
+      if (member) {
+        participantName = member.participantName || "Team Member";
+        participantEmail = member.participantEmail || "";
+        participantPhone = member.participantPhone || "";
+        collegeId = member.collegeId || "";
+        department = member.department || "";
+        yearOfStudy = member.yearOfStudy || "";
+        teamRole = member.role || "";
+        teamName = registration.team.teamName || "";
+        projectTitle = registration.team.projectTitle || "";
+      }
+    } else {
+      const user = registration.user || ticket.user || {};
+      participantName = registration.participantName || user.fullName || "Participant";
+      participantEmail = registration.participantEmail || user.email || "";
+      participantPhone = registration.participantPhone || user.phone || "";
+      collegeId = registration.collegeId || user.collegeId || "";
+      department = registration.department || "";
+      yearOfStudy = registration.yearOfStudy || "";
+      projectTitle = registration.projectTitle || "";
+    }
 
     /**
      * ========================================================
@@ -264,7 +296,7 @@ const generateRegistrationPDF =
           )
           .text(
             `Dear ${safeText(
-              user.fullName,
+              participantName,
               "Participant",
             )},`,
           );
@@ -300,31 +332,66 @@ const generateRegistrationPDF =
             [
               "Name",
               safeText(
-                user.fullName,
+                participantName,
               ),
             ],
 
             [
               "Email",
               safeText(
-                user.email,
+                participantEmail,
               ),
             ],
 
             [
               "Phone",
               safeText(
-                user.phone,
+                participantPhone,
               ),
             ],
 
             [
               "College ID",
               safeText(
-                user.collegeId,
+                collegeId,
               ),
             ],
           ];
+
+        if (department) {
+          participantRows.push([
+            "Department",
+            safeText(department),
+          ]);
+        }
+
+        if (yearOfStudy) {
+          participantRows.push([
+            "Year of Study",
+            safeText(yearOfStudy),
+          ]);
+        }
+
+        if (teamName) {
+          participantRows.push([
+            "Team Name",
+            safeText(teamName),
+          ]);
+        }
+
+        if (teamRole) {
+          participantRows.push([
+            "Team Role",
+            safeText(teamRole),
+          ]);
+        }
+
+        if (projectTitle) {
+          participantRows.push([
+            "Project Title",
+            safeText(projectTitle),
+          ]);
+        }
 
         participantRows.forEach(
           ([label, value]) => {
@@ -462,6 +529,13 @@ const generateRegistrationPDF =
 
         const ticketRows =
           [
+            [
+              "Registration ID",
+              safeText(
+                registrationId,
+              ),
+            ],
+
             [
               "Ticket Number",
               safeText(

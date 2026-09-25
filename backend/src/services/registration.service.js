@@ -1714,9 +1714,10 @@ const retryTicketGeneration = async (registrationId) => {
 
   // Re-send emails
   try {
-    const emailPromises = tickets.map(async (ticket) => {
+    const jobsData = [];
+    for (const ticket of tickets) {
       if (ticket._isRecovered) {
-        return; // Skip sending duplicate email for a ticket that already existed
+        continue; // Skip sending duplicate email for a ticket that already existed
       }
       
       let recipientEmail = null;
@@ -1733,20 +1734,20 @@ const retryTicketGeneration = async (registrationId) => {
       }
 
       if (recipientEmail) {
-        await emailUtil.sendRegistrationConfirmation(
+        jobsData.push({
+          registration: registration._id,
+          ticket: ticket._id,
+          type: "REGISTRATION_CONFIRMATION",
           recipientEmail,
-          {
-            eventName: registration.event.name,
-            festivalName: registration.event.festival ? "Festival" : "",
-            participantName,
-            registrationId: registration._id,
-            qrCode: ticket.qrCode,
-          }
-        );
+          recipientName: participantName,
+        });
       }
-    });
+    }
 
-    await Promise.all(emailPromises);
+    if (jobsData.length > 0) {
+      const emailJobRepository = (await import("../repositories/emailJob.repository.js")).default;
+      await emailJobRepository.createConfirmationJobs(jobsData);
+    }
     logger.info(`Recovery: Registration confirmation emails sent successfully for registration ${registration._id}.`);
   } catch (emailError) {
     logger.error(

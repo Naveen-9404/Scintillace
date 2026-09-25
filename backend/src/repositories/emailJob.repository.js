@@ -56,7 +56,10 @@ const claimJobAtomically = async () => {
     }
   )
     .populate("registration")
-    .populate("ticket")
+    .populate({
+      path: "ticket",
+      select: "+qrToken"
+    })
     .exec();
 };
 

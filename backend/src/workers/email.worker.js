@@ -80,6 +80,7 @@ const processNextJob = async () => {
       participantName: job.recipientName,
       eventName: event?.title || "Event",
       ticketNumber: ticket.ticketNumber,
+      registrationId: registration._id || registration,
       pdfBuffer,
     });
 
@@ -163,6 +164,7 @@ const processNextJobSafe = async () => {
       participantName: job.recipientName,
       eventName: event?.title || "Event",
       ticketNumber: ticket.ticketNumber,
+      registrationId: registration._id || registration,
       pdfBuffer,
     });
 
