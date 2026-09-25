@@ -212,6 +212,58 @@ export const deleteRegistration =
     return response.data;
   };
 
+export const downloadTicketPdf = async (id, teamMemberId = null) => {
+  const url = teamMemberId
+    ? `/registrations/${id}/ticket-pdf?teamMemberId=${teamMemberId}`
+    : `/registrations/${id}/ticket-pdf`;
+
+  const response = await apiClient.get(url, {
+    responseType: 'blob',
+  });
+
+  const contentDisposition = response.headers['content-disposition'];
+  let filename = 'Ticket.pdf';
+  if (contentDisposition) {
+    const match = contentDisposition.match(/filename="?([^"]+)"?/);
+    if (match && match[1]) {
+      filename = match[1];
+    }
+  }
+
+  const blobUrl = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement('a');
+  link.href = blobUrl;
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(blobUrl);
+};
+
+export const downloadTeamTicketsZip = async (id) => {
+  const response = await apiClient.get(`/registrations/${id}/team-tickets-zip`, {
+    responseType: 'blob',
+  });
+
+  const contentDisposition = response.headers['content-disposition'];
+  let filename = 'Tickets.zip';
+  if (contentDisposition) {
+    const match = contentDisposition.match(/filename="?([^"]+)"?/);
+    if (match && match[1]) {
+      filename = match[1];
+    }
+  }
+
+  const blobUrl = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement('a');
+  link.href = blobUrl;
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(blobUrl);
+};
+
 const registrationsAdminApi =
   Object.freeze({
     getAllRegistrations,
@@ -226,6 +278,8 @@ const registrationsAdminApi =
     getPaymentByRegistration,
     approveRegistration,
     rejectRegistration,
+    downloadTicketPdf,
+    downloadTeamTicketsZip,
   });
 
 export default registrationsAdminApi;

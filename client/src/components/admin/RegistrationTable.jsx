@@ -17,6 +17,7 @@ import {
   Search,
   Trash2,
   X,
+  Download,
 } from "lucide-react";
 
 import registrationsAdminApi from "../../api/registrations.admin.api";
@@ -259,6 +260,31 @@ function RegistrationDetailsModal({
   );
   const [rejectionReason, setRejectionReason] = useState("");
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [downloadingTicketId, setDownloadingTicketId] = useState(null);
+
+  const handleDownloadTicket = async (teamMemberId = null) => {
+    try {
+      setDownloadingTicketId(teamMemberId || 'individual');
+      await registrationsAdminApi.downloadTicketPdf(getRegistrationId(registration), teamMemberId);
+    } catch (err) {
+      console.error("Failed to download ticket", err);
+      alert("Failed to download ticket. Please ensure it's generated.");
+    } finally {
+      setDownloadingTicketId(null);
+    }
+  };
+
+  const handleDownloadTeamZip = async () => {
+    try {
+      setDownloadingTicketId('zip');
+      await registrationsAdminApi.downloadTeamTicketsZip(getRegistrationId(registration));
+    } catch (err) {
+      console.error("Failed to download team zip", err);
+      alert("Failed to download team tickets. Please ensure they are generated.");
+    } finally {
+      setDownloadingTicketId(null);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -695,6 +721,95 @@ function RegistrationDetailsModal({
             </ActionCard>
 
           </div>
+
+          {(registration.paymentStatus === "PAID" && registration.status === "REGISTERED") && (
+            <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.02] p-6">
+              <div className="mb-4">
+                <h3 className="text-sm font-bold uppercase tracking-[0.15em] text-violet-400">
+                  Tickets
+                </h3>
+              </div>
+              
+              {!team ? (
+                <div className="flex items-center justify-between rounded-xl bg-slate-900/50 p-4">
+                  <div>
+                    <p className="text-sm font-semibold text-white">Individual Ticket</p>
+                    <p className="text-xs text-slate-400">Download the registration ticket PDF</p>
+                  </div>
+                  <button
+                    onClick={() => handleDownloadTicket()}
+                    disabled={downloadingTicketId === 'individual'}
+                    className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
+                  >
+                    {downloadingTicketId === 'individual' ? (
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    ) : (
+                      <Download size={16} />
+                    )}
+                    Download Ticket
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-sm text-slate-400">Team members and their tickets</p>
+                    <button
+                      onClick={handleDownloadTeamZip}
+                      disabled={downloadingTicketId === 'zip'}
+                      className="flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-500 disabled:opacity-50"
+                    >
+                      {downloadingTicketId === 'zip' ? (
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      ) : (
+                        <Download size={16} />
+                      )}
+                      Download All (ZIP)
+                    </button>
+                  </div>
+                  
+                  <div className="overflow-hidden rounded-xl border border-white/10">
+                    <table className="w-full text-left text-sm">
+                      <thead className="bg-white/5 text-xs uppercase text-slate-400">
+                        <tr>
+                          <th className="px-4 py-3 font-medium">Member Name</th>
+                          <th className="px-4 py-3 font-medium">Role</th>
+                          <th className="px-4 py-3 font-medium text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5 bg-slate-900/50">
+                        {team.members?.map((member) => (
+                          <tr key={member._id}>
+                            <td className="px-4 py-3 font-medium text-white">
+                              {member.participantName || member.user?.fullName || "—"}
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="inline-flex rounded-full bg-white/5 px-2 py-1 text-xs font-medium text-slate-300 border border-white/10">
+                                {member.role}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <button
+                                onClick={() => handleDownloadTicket(member._id)}
+                                disabled={downloadingTicketId === member._id}
+                                className="inline-flex items-center gap-2 rounded-lg bg-blue-600/20 px-3 py-1.5 text-xs font-semibold text-blue-400 hover:bg-blue-600/30 border border-blue-500/20 disabled:opacity-50"
+                              >
+                                {downloadingTicketId === member._id ? (
+                                  <div className="h-3 w-3 animate-spin rounded-full border-2 border-blue-400 border-t-transparent" />
+                                ) : (
+                                  <Download size={14} />
+                                )}
+                                Ticket
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {canDelete && (
             <div className="mt-6 rounded-2xl border border-red-500/20 bg-red-500/5 p-5">
