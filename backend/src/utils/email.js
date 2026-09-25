@@ -28,6 +28,16 @@ const transporter =
       pass:
         process.env.SMTP_PASSWORD,
     },
+
+    // Pooling for connection reuse
+    pool: true,
+    maxConnections: 2,
+    maxMessages: 50,
+
+    // Explicit timeouts for connection reliability
+    connectionTimeout: 10000, // 10 seconds
+    greetingTimeout: 10000,   // 10 seconds
+    socketTimeout: 30000,     // 30 seconds
   });
 
 /**
