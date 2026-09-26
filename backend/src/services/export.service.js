@@ -37,11 +37,7 @@ const exportModel = async (
     });
   }
 
-  const records =
-    await query
-      .sort(sort)
-      .lean()
-      .exec();
+  const records = await query.sort(sort).lean().exec();
 
   return records;
 };
@@ -52,33 +48,33 @@ const exportModel = async (
  * ============================================================
  */
 
-const safeDate = (val) => val ? new Date(val).toISOString() : "N/A";
+const safeDate = (val) => (val ? new Date(val).toISOString() : "N/A");
 
 const mapUser = (user) => ({
   "User ID": user?._id?.toString() || "N/A",
   "Full Name": user?.fullName || "N/A",
-  "Email": user?.email || "N/A",
-  "Role": user?.role || "N/A",
-  "Phone": user?.phone || "N/A",
+  Email: user?.email || "N/A",
+  Role: user?.role || "N/A",
+  Phone: user?.phone || "N/A",
   "College/Institution": user?.collegeId || "N/A",
-  "Status": user?.status || "N/A",
+  Status: user?.status || "N/A",
   "Created At": safeDate(user?.createdAt),
 });
 
 const mapEvent = (event) => ({
   "Event ID": event?._id?.toString() || "N/A",
-  "Title": event?.title || "N/A",
-  "Category": event?.category || "N/A",
-  "Type": event?.type || "N/A",
-  "Status": event?.status || "N/A",
-  "Festival": event?.festival?.title || "N/A",
+  Title: event?.title || "N/A",
+  Category: event?.category || "N/A",
+  Type: event?.type || "N/A",
+  Status: event?.status || "N/A",
+  Festival: event?.festival?.title || "N/A",
   "Created At": safeDate(event?.createdAt),
 });
 
 const mapFestival = (festival) => ({
   "Festival ID": festival?._id?.toString() || "N/A",
-  "Title": festival?.title || "N/A",
-  "Status": festival?.status || "N/A",
+  Title: festival?.title || "N/A",
+  Status: festival?.status || "N/A",
   "Start Date": safeDate(festival?.startDate),
   "End Date": safeDate(festival?.endDate),
 });
@@ -88,7 +84,7 @@ const mapRegistration = (reg) => {
   return {
     "Registration ID": reg?._id?.toString() || "N/A",
     "Registration Date": safeDate(reg?.registrationDate),
-    "Event": reg?.event?.title || "N/A",
+    Event: reg?.event?.title || "N/A",
     "Event Category": reg?.event?.category || "N/A",
     "Participation Type": isTeam ? "Team Leader" : "Individual",
     "Team Name": reg?.team?.teamName || "N/A",
@@ -97,7 +93,7 @@ const mapRegistration = (reg) => {
     "Participant/Leader Email": reg?.participantEmail || "N/A",
     "Participant/Leader Phone": reg?.participantPhone || "N/A",
     "College ID": reg?.collegeId || "N/A",
-    "Department": reg?.department || "N/A",
+    Department: reg?.department || "N/A",
     "Year of Study": reg?.yearOfStudy || "N/A",
     "Registration Status": reg?.status || "N/A",
     "Payment Status": reg?.paymentStatus || "N/A",
@@ -110,22 +106,22 @@ const mapRegistration = (reg) => {
 
 const extractParticipants = (registrations) => {
   const participants = [];
-  registrations.forEach(reg => {
+  registrations.forEach((reg) => {
     const isTeam = !!reg.team;
-    
+
     // Always push the individual or leader
     participants.push({
       "Registration ID": reg?._id?.toString() || "N/A",
-      "Event": reg?.event?.title || "N/A",
+      Event: reg?.event?.title || "N/A",
       "Event Category": reg?.event?.category || "N/A",
       "Team Name": reg?.team?.teamName || "N/A",
       "Participation Type": isTeam ? "Team Registration" : "Individual",
-      "Role": isTeam ? "Leader" : "Participant",
+      Role: isTeam ? "Leader" : "Participant",
       "Participant Name": reg?.participantName || "N/A",
       "Participant Email": reg?.participantEmail || "N/A",
       "Participant Phone": reg?.participantPhone || "N/A",
       "College ID": reg?.collegeId || "N/A",
-      "Department": reg?.department || "N/A",
+      Department: reg?.department || "N/A",
       "Year of Study": reg?.yearOfStudy || "N/A",
       "Project Title": reg?.projectTitle || reg?.team?.projectTitle || "N/A",
       "Registration Status": reg?.status || "N/A",
@@ -137,24 +133,26 @@ const extractParticipants = (registrations) => {
     // Extract other members if team exists
     if (isTeam && Array.isArray(reg.team.members)) {
       // Find members who are not the leader
-      const members = reg.team.members.filter(m => 
-        m.participantEmail?.toLowerCase() !== reg.participantEmail?.toLowerCase()
+      const members = reg.team.members.filter(
+        (m) =>
+          m.participantEmail?.toLowerCase() !==
+          reg.participantEmail?.toLowerCase(),
       );
-      
-      members.forEach(m => {
+
+      members.forEach((m) => {
         participants.push({
           "Registration ID": reg?._id?.toString() || "N/A",
-          "Event": reg?.event?.title || "N/A",
+          Event: reg?.event?.title || "N/A",
           "Event Category": reg?.event?.category || "N/A",
           "Team Name": reg?.team?.teamName || "N/A",
           "Participation Type": "Team Registration",
-          "Role": m.role || "Member",
-          "Participant Name": m.participantName || "N/A",
-          "Participant Email": m.participantEmail || "N/A",
-          "Participant Phone": m.participantPhone || "N/A",
-          "College ID": m.collegeId || "N/A",
-          "Department": m.department || "N/A",
-          "Year of Study": m.yearOfStudy || "N/A",
+          Role: m.role || "Member",
+          "Participant Name": m.participantName || m.user?.fullName || "N/A",
+          "Participant Email": m.participantEmail || m.user?.email || "N/A",
+          "Participant Phone": m.participantPhone || m.user?.phone || "N/A",
+          "College ID": m.collegeId || m.user?.collegeId || "N/A",
+          Department: m.department || m.user?.department || "N/A",
+          "Year of Study": m.yearOfStudy || m.user?.yearOfStudy || "N/A",
           "Project Title": reg?.team?.projectTitle || "N/A",
           "Registration Status": reg?.status || "N/A",
           "Payment Status": reg?.paymentStatus || "N/A",
@@ -170,7 +168,7 @@ const extractParticipants = (registrations) => {
 const mapTeam = (team) => ({
   "Team ID": team?._id?.toString() || "N/A",
   "Team Name": team?.teamName || "N/A",
-  "Event": team?.event?.title || "N/A",
+  Event: team?.event?.title || "N/A",
   "Event Category": team?.event?.category || "N/A",
   "Project Title": team?.projectTitle || "N/A",
   "Maximum Members": team?.maxMembers || "N/A",
@@ -181,21 +179,21 @@ const mapTeam = (team) => ({
 
 const extractTeamMembers = (teams) => {
   const membersList = [];
-  teams.forEach(team => {
+  teams.forEach((team) => {
     if (Array.isArray(team.members)) {
-      team.members.forEach(m => {
+      team.members.forEach((m) => {
         membersList.push({
           "Team ID": team?._id?.toString() || "N/A",
           "Team Name": team?.teamName || "N/A",
-          "Event": team?.event?.title || "N/A",
+          Event: team?.event?.title || "N/A",
           "Event Category": team?.event?.category || "N/A",
-          "Role": m.role || "N/A",
-          "Participant Name": m.participantName || "N/A",
-          "Participant Email": m.participantEmail || "N/A",
-          "Participant Phone": m.participantPhone || "N/A",
-          "College ID": m.collegeId || "N/A",
-          "Department": m.department || "N/A",
-          "Year of Study": m.yearOfStudy || "N/A",
+          Role: m.role || "N/A",
+          "Participant Name": m.participantName || m.user?.fullName || "N/A",
+          "Participant Email": m.participantEmail || m.user?.email || "N/A",
+          "Participant Phone": m.participantPhone || m.user?.phone || "N/A",
+          "College ID": m.collegeId || m.user?.collegeId || "N/A",
+          Department: m.department || m.user?.department || "N/A",
+          "Year of Study": m.yearOfStudy || m.user?.yearOfStudy || "N/A",
           "Joined At": safeDate(m.joinedAt),
         });
       });
@@ -207,9 +205,18 @@ const extractTeamMembers = (teams) => {
 const mapPayment = (payment) => {
   let participantInfo = "N/A";
   if (payment?.paymentFor === "EVENT" && payment?.registration) {
-    participantInfo = payment.registration.participantName || payment.registration.participantEmail || "N/A";
-  } else if (payment?.paymentFor === "ACCOMMODATION" && payment?.accommodation) {
-    participantInfo = payment.accommodation.participantName || payment.accommodation.participantEmail || "N/A";
+    participantInfo =
+      payment.registration.participantName ||
+      payment.registration.participantEmail ||
+      "N/A";
+  } else if (
+    payment?.paymentFor === "ACCOMMODATION" &&
+    payment?.accommodation
+  ) {
+    participantInfo =
+      payment.accommodation.participantName ||
+      payment.accommodation.participantEmail ||
+      "N/A";
   } else if (payment?.user) {
     participantInfo = payment.user.fullName || payment.user.email || "N/A";
   }
@@ -218,11 +225,11 @@ const mapPayment = (payment) => {
     "Payment ID": payment?._id?.toString() || "N/A",
     "Registration ID": payment?.registration?._id?.toString() || "N/A",
     "Accommodation ID": payment?.accommodation?._id?.toString() || "N/A",
-    "Event": payment?.registration?.event?.title || "N/A",
+    Event: payment?.registration?.event?.title || "N/A",
     "Participant/Team": participantInfo,
     "Payment For": payment?.paymentFor || "N/A",
-    "Amount": payment?.amount || 0,
-    "Currency": payment?.currency || "INR",
+    Amount: payment?.amount || 0,
+    Currency: payment?.currency || "INR",
     "Payment Status": payment?.status || "N/A",
     "Paid At": safeDate(payment?.paidAt),
     "Approved At": safeDate(payment?.approvedAt),
@@ -240,7 +247,7 @@ const mapAccommodation = (acc) => ({
   "Participant Email": acc?.participantEmail || "N/A",
   "Participant Phone": acc?.participantPhone || "N/A",
   "College ID": acc?.collegeId || "N/A",
-  "Department": acc?.department || "N/A",
+  Department: acc?.department || "N/A",
   "Year of Study": acc?.yearOfStudy || "N/A",
   "Hostel Type": acc?.hostelType || "N/A",
   "Check In Date": safeDate(acc?.checkInDate),
@@ -260,7 +267,7 @@ const mapTicket = (ticket) => ({
   "Ticket ID": ticket?._id?.toString() || "N/A",
   "Registration ID": ticket?.registration?.toString() || "N/A",
   "Participant Name": ticket?.user?.fullName || "N/A",
-  "Event": ticket?.event?.title || "N/A",
+  Event: ticket?.event?.title || "N/A",
   "Ticket Number": ticket?.ticketNumber || "N/A",
   "Ticket Status": ticket?.status || "N/A",
   "Checked In": ticket?.checkedIn ? "Yes" : "No",
@@ -273,10 +280,10 @@ const mapCertificate = (cert) => ({
   "Certificate ID": cert?._id?.toString() || "N/A",
   "Registration ID": cert?.registration?.toString() || "N/A",
   "Participant Name": cert?.participantName || cert?.user?.fullName || "N/A",
-  "Event": cert?.event?.title || "N/A",
+  Event: cert?.event?.title || "N/A",
   "Certificate Type": cert?.certificateType || "N/A",
   "Certificate Number": cert?.certificateNumber || "N/A",
-  "Status": cert?.status || "N/A",
+  Status: cert?.status || "N/A",
   "Issued At": safeDate(cert?.issuedAt),
   "Email Sent": cert?.emailSent ? "Yes" : "No",
   "Created At": safeDate(cert?.createdAt),
@@ -307,7 +314,9 @@ const exportFestivals = async ({ filter = {} } = {}) => {
     filter,
     sort: { createdAt: -1 },
   });
-  return createExcelWorkbook(records.map(mapFestival), { sheetName: "Festivals" });
+  return createExcelWorkbook(records.map(mapFestival), {
+    sheetName: "Festivals",
+  });
 };
 
 /**
@@ -319,9 +328,7 @@ const exportFestivals = async ({ filter = {} } = {}) => {
 const exportEvents = async ({ filter = {} } = {}) => {
   const records = await exportModel(Event, {
     filter,
-    populate: [
-      { path: "festival", select: "title status" },
-    ],
+    populate: [{ path: "festival", select: "title status" }],
     sort: { createdAt: -1 },
   });
   return createExcelWorkbook(records.map(mapEvent), { sheetName: "Events" });
@@ -338,7 +345,14 @@ const exportRegistrations = async ({ filter = {} } = {}) => {
     filter,
     populate: [
       { path: "event", select: "title category type" },
-      { path: "team", select: "teamName status projectTitle members" },
+      {
+        path: "team",
+        select: "teamName status projectTitle members",
+        populate: {
+          path: "members.user",
+          select: "fullName email phone collegeId department yearOfStudy",
+        },
+      },
     ],
     sort: { registrationDate: -1 },
   });
@@ -351,7 +365,7 @@ const exportRegistrations = async ({ filter = {} } = {}) => {
     {
       name: "Participants",
       data: extractParticipants(records),
-    }
+    },
   ]);
 };
 
@@ -366,12 +380,18 @@ const exportPayments = async ({ filter = {} } = {}) => {
     filter,
     populate: [
       { path: "user", select: "fullName email phone" },
-      { path: "registration", select: "status paymentStatus participantName participantEmail", populate: { path: "event", select: "title" } },
+      {
+        path: "registration",
+        select: "status paymentStatus participantName participantEmail",
+        populate: { path: "event", select: "title" },
+      },
       { path: "accommodation", select: "participantName participantEmail" },
     ],
     sort: { createdAt: -1 },
   });
-  return createExcelWorkbook(records.map(mapPayment), { sheetName: "Payments" });
+  return createExcelWorkbook(records.map(mapPayment), {
+    sheetName: "Payments",
+  });
 };
 
 /**
@@ -385,7 +405,9 @@ const exportAccommodation = async ({ filter = {} } = {}) => {
     filter,
     sort: { createdAt: -1 },
   });
-  return createExcelWorkbook(records.map(mapAccommodation), { sheetName: "Accommodation" });
+  return createExcelWorkbook(records.map(mapAccommodation), {
+    sheetName: "Accommodation",
+  });
 };
 
 /**
@@ -421,7 +443,9 @@ const exportCertificates = async ({ filter = {} } = {}) => {
     ],
     sort: { createdAt: -1 },
   });
-  return createExcelWorkbook(records.map(mapCertificate), { sheetName: "Certificates" });
+  return createExcelWorkbook(records.map(mapCertificate), {
+    sheetName: "Certificates",
+  });
 };
 
 /**
@@ -440,17 +464,48 @@ const exportCompleteReport = async () => {
     accommodation,
     tickets,
     certificates,
-    teams
+    teams,
   ] = await Promise.all([
     User.find().lean().exec(),
     Festival.find().lean().exec(),
     Event.find().populate("festival", "title").lean().exec(),
-    Registration.find().populate("event", "title category").populate("team", "teamName projectTitle members").lean().exec(),
-    Payment.find().populate("user", "fullName email").populate({ path: "registration", populate: { path: "event", select: "title" } }).populate("accommodation").lean().exec(),
+    Registration.find()
+      .populate("event", "title category")
+      .populate({
+        path: "team",
+        select: "teamName projectTitle members",
+        populate: {
+          path: "members.user",
+          select: "fullName email phone collegeId department yearOfStudy",
+        },
+      })
+      .lean()
+      .exec(),
+    Payment.find()
+      .populate("user", "fullName email")
+      .populate({
+        path: "registration",
+        populate: { path: "event", select: "title" },
+      })
+      .populate("accommodation")
+      .lean()
+      .exec(),
     Accommodation.find().lean().exec(),
-    Ticket.find().populate("user", "fullName").populate("event", "title").lean().exec(),
-    Certificate.find().populate("user", "fullName").populate("event", "title").lean().exec(),
-    Team.find().populate("event", "title category").lean().exec(),
+    Ticket.find()
+      .populate("user", "fullName")
+      .populate("event", "title")
+      .lean()
+      .exec(),
+    Certificate.find()
+      .populate("user", "fullName")
+      .populate("event", "title")
+      .lean()
+      .exec(),
+    Team.find()
+      .populate("event", "title category")
+      .populate("members.user", "fullName email phone collegeId department yearOfStudy")
+      .lean()
+      .exec(),
   ]);
 
   return createMultiSheetWorkbook([
