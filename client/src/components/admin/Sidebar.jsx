@@ -1,4 +1,4 @@
-﻿import {
+import {
   LayoutDashboard,
   Megaphone,
   CalendarDays,
@@ -6,6 +6,7 @@
   Award,
   BarChart3,
   X,
+  Bed,
 } from "lucide-react";
 
 const menuItems = [
@@ -33,6 +34,11 @@ const menuItems = [
     id: "certificates",
     label: "Certificates",
     icon: Award,
+  },
+  {
+    id: "accommodations",
+    label: "Accommodations",
+    icon: Bed,
   },
   {
     id: "reports",

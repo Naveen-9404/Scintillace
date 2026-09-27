@@ -461,3 +461,16 @@ export const deleteAccommodation =
 
     return data?.data || null;
   };
+
+/**
+ * ============================================================
+ * Get All Accommodation Bookings (Admin)
+ * ============================================================
+ *
+ * GET /api/v1/accommodation
+ */
+
+export const getAllAccommodationBookings = async (params = {}) => {
+  const { data } = await apiClient.get("/accommodation", { params });
+  return data;
+};

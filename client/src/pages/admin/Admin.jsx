@@ -17,6 +17,7 @@ import AnnouncementPanel from "../../components/admin/AnnouncementPanel";
 import EventTable from "../../components/admin/EventTable";
 import RegistrationTable from "../../components/admin/RegistrationTable";
 import AdminCertificates from "../../components/admin/AdminCertificates";
+import AccommodationTable from "../../components/admin/AccommodationTable";
 
 import useAdmin from "../../hooks/useAdmin";
 
@@ -26,6 +27,7 @@ const SECTIONS = {
   EVENTS: "events",
   REGISTRATIONS: "registrations",
   CERTIFICATES: "certificates",
+  ACCOMMODATIONS: "accommodations",
   REPORTS: "reports",
 };
 
@@ -96,6 +98,17 @@ export default function Admin() {
       case SECTIONS.CERTIFICATES:
         return (
           <AdminCertificates />
+        );
+
+      /**
+       * ========================================================
+       * Accommodations
+       * ========================================================
+       */
+
+      case SECTIONS.ACCOMMODATIONS:
+        return (
+          <AccommodationTable />
         );
 
       /**

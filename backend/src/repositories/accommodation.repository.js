@@ -14,8 +14,7 @@ import {
 const accommodationPopulate = [
   {
     path: "user",
-    select:
-      "fullName email collegeId role",
+    select: "fullName email collegeId role",
   },
 
   {
@@ -23,27 +22,23 @@ const accommodationPopulate = [
     populate: [
       {
         path: "event",
-        select:
-          "title category type venue startDateTime endDateTime",
+        select: "title category type venue startDateTime endDateTime",
       },
     ],
   },
 
   {
     path: "event",
-    select:
-      "title category type venue startDateTime endDateTime festival",
+    select: "title category type venue startDateTime endDateTime festival",
     populate: {
       path: "festival",
-      select:
-        "title status",
+      select: "title status",
     },
   },
 
   {
     path: "payment",
-    select:
-      "amount currency gateway orderId paymentId status paidAt",
+    select: "amount currency gateway orderId paymentId status paidAt screenshotUrl screenshotPublicId",
   },
 ];
 
@@ -53,12 +48,8 @@ const accommodationPopulate = [
  * ============================================================
  */
 
-const getPagination = ({
-  page = 1,
-  limit = 10,
-} = {}) => ({
-  skip:
-    (page - 1) * limit,
+const getPagination = ({ page = 1, limit = 10 } = {}) => ({
+  skip: (page - 1) * limit,
 
   limit,
 });
@@ -69,21 +60,13 @@ const getPagination = ({
  * ============================================================
  */
 
-const create = async (
-  accommodationData,
-  session = null,
-) => {
-  const [accommodation] =
-    await Accommodation.create(
-      [accommodationData],
-      session
-        ? { session }
-        : {},
-    );
-
-  return accommodation.populate(
-    accommodationPopulate,
+const create = async (accommodationData, session = null) => {
+  const [accommodation] = await Accommodation.create(
+    [accommodationData],
+    session ? { session } : {},
   );
+
+  return accommodation.populate(accommodationPopulate);
 };
 
 /**
@@ -92,15 +75,9 @@ const create = async (
  * ============================================================
  */
 
-const findById = (
-  accommodationId,
-) => {
-  return Accommodation.findById(
-    accommodationId,
-  )
-    .populate(
-      accommodationPopulate,
-    )
+const findById = (accommodationId) => {
+  return Accommodation.findById(accommodationId)
+    .populate(accommodationPopulate)
     .exec();
 };
 
@@ -112,12 +89,8 @@ const findById = (
  * Returns a real Mongoose document.
  */
 
-const findDocumentById = (
-  accommodationId,
-) => {
-  return Accommodation.findById(
-    accommodationId,
-  ).exec();
+const findDocumentById = (accommodationId) => {
+  return Accommodation.findById(accommodationId).exec();
 };
 
 /**
@@ -126,17 +99,8 @@ const findDocumentById = (
  * ============================================================
  */
 
-const findByUser = (
-  userId,
-  {
-    page = 1,
-    limit = 10,
-  } = {},
-) => {
-  const {
-    skip,
-    limit: paginationLimit,
-  } = getPagination({
+const findByUser = (userId, { page = 1, limit = 10 } = {}) => {
+  const { skip, limit: paginationLimit } = getPagination({
     page,
     limit,
   });
@@ -144,16 +108,12 @@ const findByUser = (
   return Accommodation.find({
     user: userId,
   })
-    .populate(
-      accommodationPopulate,
-    )
+    .populate(accommodationPopulate)
     .sort({
       createdAt: -1,
     })
     .skip(skip)
-    .limit(
-      paginationLimit,
-    )
+    .limit(paginationLimit)
     .exec();
 };
 
@@ -165,16 +125,11 @@ const findByUser = (
  * One accommodation booking per registration.
  */
 
-const findByRegistration = (
-  registrationId,
-) => {
+const findByRegistration = (registrationId) => {
   return Accommodation.findOne({
-    registration:
-      registrationId,
+    registration: registrationId,
   })
-    .populate(
-      accommodationPopulate,
-    )
+    .populate(accommodationPopulate)
     .exec();
 };
 
@@ -202,17 +157,8 @@ const findByRegistrationAndTeamMember = (
  * ============================================================
  */
 
-const findByEvent = (
-  eventId,
-  {
-    page = 1,
-    limit = 10,
-  } = {},
-) => {
-  const {
-    skip,
-    limit: paginationLimit,
-  } = getPagination({
+const findByEvent = (eventId, { page = 1, limit = 10 } = {}) => {
+  const { skip, limit: paginationLimit } = getPagination({
     page,
     limit,
   });
@@ -220,16 +166,12 @@ const findByEvent = (
   return Accommodation.find({
     event: eventId,
   })
-    .populate(
-      accommodationPopulate,
-    )
+    .populate(accommodationPopulate)
     .sort({
       createdAt: -1,
     })
     .skip(skip)
-    .limit(
-      paginationLimit,
-    )
+    .limit(paginationLimit)
     .exec();
 };
 
@@ -247,25 +189,16 @@ const findAll = ({
     createdAt: -1,
   },
 } = {}) => {
-  const {
-    skip,
-    limit: paginationLimit,
-  } = getPagination({
+  const { skip, limit: paginationLimit } = getPagination({
     page,
     limit,
   });
 
-  return Accommodation.find(
-    filter,
-  )
-    .populate(
-      accommodationPopulate,
-    )
+  return Accommodation.find(filter)
+    .populate(accommodationPopulate)
     .sort(sort)
     .skip(skip)
-    .limit(
-      paginationLimit,
-    )
+    .limit(paginationLimit)
     .exec();
 };
 
@@ -275,12 +208,8 @@ const findAll = ({
  * ============================================================
  */
 
-const count = (
-  filter = {},
-) => {
-  return Accommodation.countDocuments(
-    filter,
-  );
+const count = (filter = {}) => {
+  return Accommodation.countDocuments(filter);
 };
 
 /**
@@ -294,25 +223,18 @@ const count = (
  * and room allocation is handled offline.
  */
 
-const countConfirmedBookings = (
-  eventId,
-  hostelType = null,
-) => {
+const countConfirmedBookings = (eventId, hostelType = null) => {
   const filter = {
     event: eventId,
 
-    bookingStatus:
-      ACCOMMODATION_BOOKING_STATUS.CONFIRMED,
+    bookingStatus: ACCOMMODATION_BOOKING_STATUS.CONFIRMED,
   };
 
   if (hostelType) {
-    filter.hostelType =
-      hostelType;
+    filter.hostelType = hostelType;
   }
 
-  return Accommodation.countDocuments(
-    filter,
-  );
+  return Accommodation.countDocuments(filter);
 };
 
 /**
@@ -330,29 +252,25 @@ const countConfirmedBookings = (
  * }
  */
 
-const countConfirmedByHostel = async (
-  eventId,
-) => {
-  const result =
-    await Accommodation.aggregate([
-      {
-        $match: {
-          event: eventId,
+const countConfirmedByHostel = async (eventId) => {
+  const result = await Accommodation.aggregate([
+    {
+      $match: {
+        event: eventId,
 
-          bookingStatus:
-            ACCOMMODATION_BOOKING_STATUS.CONFIRMED,
+        bookingStatus: ACCOMMODATION_BOOKING_STATUS.CONFIRMED,
+      },
+    },
+
+    {
+      $group: {
+        _id: "$hostelType",
+        count: {
+          $sum: 1,
         },
       },
-
-      {
-        $group: {
-          _id: "$hostelType",
-          count: {
-            $sum: 1,
-          },
-        },
-      },
-    ]);
+    },
+  ]);
 
   return result;
 };
@@ -363,18 +281,13 @@ const countConfirmedByHostel = async (
  * ============================================================
  */
 
-const findPendingByUser = (
-  userId,
-) => {
+const findPendingByUser = (userId) => {
   return Accommodation.findOne({
     user: userId,
 
-    bookingStatus:
-      ACCOMMODATION_BOOKING_STATUS.PENDING,
+    bookingStatus: ACCOMMODATION_BOOKING_STATUS.PENDING,
   })
-    .populate(
-      accommodationPopulate,
-    )
+    .populate(accommodationPopulate)
     .sort({
       createdAt: -1,
     })
@@ -387,18 +300,13 @@ const findPendingByUser = (
  * ============================================================
  */
 
-const findPaidByUser = (
-  userId,
-) => {
+const findPaidByUser = (userId) => {
   return Accommodation.findOne({
     user: userId,
 
-    paymentStatus:
-      ACCOMMODATION_PAYMENT_STATUS.PAID,
+    paymentStatus: ACCOMMODATION_PAYMENT_STATUS.PAID,
   })
-    .populate(
-      accommodationPopulate,
-    )
+    .populate(accommodationPopulate)
     .sort({
       createdAt: -1,
     })
@@ -411,18 +319,11 @@ const findPaidByUser = (
  * ============================================================
  */
 
-const findByConfirmationCode = (
-  confirmationCode,
-) => {
+const findByConfirmationCode = (confirmationCode) => {
   return Accommodation.findOne({
-    confirmationCode:
-      confirmationCode
-        .trim()
-        .toUpperCase(),
+    confirmationCode: confirmationCode.trim().toUpperCase(),
   })
-    .populate(
-      accommodationPopulate,
-    )
+    .populate(accommodationPopulate)
     .exec();
 };
 
@@ -432,25 +333,13 @@ const findByConfirmationCode = (
  * ============================================================
  */
 
-const updateById = (
-  accommodationId,
-  updateData,
-  session = null,
-) => {
-  return Accommodation.findByIdAndUpdate(
-    accommodationId,
-    updateData,
-    {
-      new: true,
-      runValidators: true,
-      ...(session
-        ? { session }
-        : {}),
-    },
-  )
-    .populate(
-      accommodationPopulate,
-    )
+const updateById = (accommodationId, updateData, session = null) => {
+  return Accommodation.findByIdAndUpdate(accommodationId, updateData, {
+    new: true,
+    runValidators: true,
+    ...(session ? { session } : {}),
+  })
+    .populate(accommodationPopulate)
     .exec();
 };
 
@@ -460,25 +349,13 @@ const updateById = (
  * ============================================================
  */
 
-const updateWithCondition = (
-  filter,
-  updateData,
-  session = null,
-) => {
-  return Accommodation.findOneAndUpdate(
-    filter,
-    updateData,
-    {
-      new: true,
-      runValidators: true,
-      ...(session
-        ? { session }
-        : {}),
-    },
-  )
-    .populate(
-      accommodationPopulate,
-    )
+const updateWithCondition = (filter, updateData, session = null) => {
+  return Accommodation.findOneAndUpdate(filter, updateData, {
+    new: true,
+    runValidators: true,
+    ...(session ? { session } : {}),
+  })
+    .populate(accommodationPopulate)
     .exec();
 };
 
@@ -488,12 +365,8 @@ const updateWithCondition = (
  * ============================================================
  */
 
-const deleteById = (
-  accommodationId,
-) => {
-  return Accommodation.findByIdAndDelete(
-    accommodationId,
-  ).exec();
+const deleteById = (accommodationId) => {
+  return Accommodation.findByIdAndDelete(accommodationId).exec();
 };
 
 /**
@@ -502,41 +375,40 @@ const deleteById = (
  * ============================================================
  */
 
-const accommodationRepository =
-  Object.freeze({
-    create,
+const accommodationRepository = Object.freeze({
+  create,
 
-    findById,
+  findById,
 
-    findDocumentById,
+  findDocumentById,
 
-    findByUser,
+  findByUser,
 
-    findByRegistration,
+  findByRegistration,
 
-    findByRegistrationAndTeamMember,
+  findByRegistrationAndTeamMember,
 
-    findByEvent,
+  findByEvent,
 
-    findAll,
+  findAll,
 
-    count,
+  count,
 
-    countConfirmedBookings,
+  countConfirmedBookings,
 
-    countConfirmedByHostel,
+  countConfirmedByHostel,
 
-    findPendingByUser,
+  findPendingByUser,
 
-    findPaidByUser,
+  findPaidByUser,
 
-    findByConfirmationCode,
+  findByConfirmationCode,
 
-    updateById,
+  updateById,
 
-    updateWithCondition,
+  updateWithCondition,
 
-    deleteById,
-  });
+  deleteById,
+});
 
 export default accommodationRepository;
