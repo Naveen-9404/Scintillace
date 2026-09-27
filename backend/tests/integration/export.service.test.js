@@ -187,6 +187,45 @@ describe("Export Service Tests", () => {
       status: "REGISTERED",
     });
 
+    // Regression Test Team (3 members)
+    const regressionTeam = await Team.create({
+      teamName: "VisionCore",
+      event: teamEvent._id,
+      festival: festival._id,
+      maxMembers: 3,
+      inviteCode: "VISION123",
+      members: [
+        {
+          participantName: "Leader One",
+          participantEmail: "leader@test.com",
+          participantPhone: "9000000001",
+          role: "LEADER",
+        },
+        {
+          participantName: "Member Two",
+          participantEmail: "member2@test.com",
+          participantPhone: "9000000002",
+          role: "MEMBER",
+        },
+        {
+          participantName: "Member Three",
+          participantEmail: "member3@test.com",
+          participantPhone: "9000000003",
+          role: "MEMBER",
+        },
+      ],
+    });
+
+    await Registration.create({
+      event: teamEvent._id,
+      festival: festival._id,
+      team: regressionTeam._id,
+      participantName: "Leader One",
+      participantEmail: "leader@test.com",
+      participantPhone: "9000000001",
+      status: "REGISTERED",
+    });
+
     // e. Payment
     await Payment.create({
       registration: regInd._id,
@@ -218,7 +257,7 @@ describe("Export Service Tests", () => {
     // Assert Registrations
     const regSheet = sheets["Registrations"];
     expect(regSheet).toBeDefined();
-    expect(regSheet.length).toBe(4);
+    expect(regSheet.length).toBe(5);
 
     const aliceRow = regSheet.find(
       (r) => r["Participant/Leader Name"] === "Alice",
@@ -233,8 +272,8 @@ describe("Export Service Tests", () => {
     // Assert Participants
     const partSheet = sheets["Participants"];
     expect(partSheet).toBeDefined();
-    // Alice(1) + Bob(1) + Charlie(1) + Dave(1) + Eve(1) + Frank(1) + Grace(1) = 7
-    expect(partSheet.length).toBe(7);
+    // Alice(1) + Bob(1) + Charlie(1) + Dave(1) + Eve(1) + Frank(1) + Grace(1) + Leader One(1) + Member Two(1) + Member Three(1) = 10
+    expect(partSheet.length).toBe(10);
 
     const charlieRow = partSheet.find(
       (r) => r["Participant Name"] === "Charlie",
@@ -262,13 +301,38 @@ describe("Export Service Tests", () => {
     expect(eveRow).toBeDefined();
     expect(eveRow["Participant Phone"]).toBe("7777777777");
 
+    // Verify VisionCore team members
+    const visionCoreMembers = partSheet.filter(r => r["Team Name"] === "VisionCore");
+    expect(visionCoreMembers.length).toBe(3);
+
+    const leaderOneRow = visionCoreMembers.find(r => r["Participant Name"] === "Leader One");
+    expect(leaderOneRow).toBeDefined();
+    expect(leaderOneRow["Participant Phone"]).toBe("9000000001");
+    expect(leaderOneRow["Participant Email"]).toBe("leader@test.com");
+    expect(leaderOneRow["Role"]).toBe("LEADER");
+
+    const memberTwoRow = visionCoreMembers.find(r => r["Participant Name"] === "Member Two");
+    expect(memberTwoRow).toBeDefined();
+    expect(memberTwoRow["Participant Phone"]).toBe("9000000002");
+    expect(memberTwoRow["Participant Email"]).toBe("member2@test.com");
+    expect(memberTwoRow["Role"]).toBe("MEMBER");
+
+    const memberThreeRow = visionCoreMembers.find(r => r["Participant Name"] === "Member Three");
+    expect(memberThreeRow).toBeDefined();
+    expect(memberThreeRow["Participant Phone"]).toBe("9000000003");
+    expect(memberThreeRow["Participant Email"]).toBe("member3@test.com");
+    expect(memberThreeRow["Role"]).toBe("MEMBER");
+
+    expect(memberTwoRow["Participant Phone"]).not.toBe(leaderOneRow["Participant Phone"]);
+    expect(memberThreeRow["Participant Phone"]).not.toBe(leaderOneRow["Participant Phone"]);
+
     // Assert Teams
     const teamSheet = sheets["Teams"];
-    expect(teamSheet.length).toBe(2);
+    expect(teamSheet.length).toBe(3);
 
     // Assert Team Members
     const membersSheet = sheets["Team Members"];
-    expect(membersSheet.length).toBe(5); // 2 in Dance Crew, 3 in Tech Titans
+    expect(membersSheet.length).toBe(8); // 2 in Dance Crew, 3 in Tech Titans, 3 in VisionCore
 
     // Assert Payments
     const paySheet = sheets["Payments"];

@@ -109,37 +109,8 @@ const extractParticipants = (registrations) => {
   registrations.forEach((reg) => {
     const isTeam = !!reg.team;
 
-    // Always push the individual or leader
-    participants.push({
-      "Registration ID": reg?._id?.toString() || "N/A",
-      Event: reg?.event?.title || "N/A",
-      "Event Category": reg?.event?.category || "N/A",
-      "Team Name": reg?.team?.teamName || "N/A",
-      "Participation Type": isTeam ? "Team Registration" : "Individual",
-      Role: isTeam ? "Leader" : "Participant",
-      "Participant Name": reg?.participantName || "N/A",
-      "Participant Email": reg?.participantEmail || "N/A",
-      "Participant Phone": reg?.participantPhone || "N/A",
-      "College ID": reg?.collegeId || "N/A",
-      Department: reg?.department || "N/A",
-      "Year of Study": reg?.yearOfStudy || "N/A",
-      "Project Title": reg?.projectTitle || reg?.team?.projectTitle || "N/A",
-      "Registration Status": reg?.status || "N/A",
-      "Payment Status": reg?.paymentStatus || "N/A",
-      "Checked In": reg?.checkedIn ? "Yes" : "No",
-      "Checked In At": safeDate(reg?.checkedInAt),
-    });
-
-    // Extract other members if team exists
     if (isTeam && Array.isArray(reg.team.members)) {
-      // Find members who are not the leader
-      const members = reg.team.members.filter(
-        (m) =>
-          m.participantEmail?.toLowerCase() !==
-          reg.participantEmail?.toLowerCase(),
-      );
-
-      members.forEach((m) => {
+      reg.team.members.forEach((m) => {
         participants.push({
           "Registration ID": reg?._id?.toString() || "N/A",
           Event: reg?.event?.title || "N/A",
@@ -153,12 +124,33 @@ const extractParticipants = (registrations) => {
           "College ID": m.collegeId || m.user?.collegeId || "N/A",
           Department: m.department || m.user?.department || "N/A",
           "Year of Study": m.yearOfStudy || m.user?.yearOfStudy || "N/A",
-          "Project Title": reg?.team?.projectTitle || "N/A",
+          "Project Title": reg?.team?.projectTitle || reg?.projectTitle || "N/A",
           "Registration Status": reg?.status || "N/A",
           "Payment Status": reg?.paymentStatus || "N/A",
-          "Checked In": "N/A",
-          "Checked In At": "N/A",
+          "Checked In": reg?.checkedIn ? "Yes" : "No",
+          "Checked In At": safeDate(reg?.checkedInAt),
         });
+      });
+    } else {
+      // Individual
+      participants.push({
+        "Registration ID": reg?._id?.toString() || "N/A",
+        Event: reg?.event?.title || "N/A",
+        "Event Category": reg?.event?.category || "N/A",
+        "Team Name": "N/A",
+        "Participation Type": "Individual",
+        Role: "Participant",
+        "Participant Name": reg?.participantName || "N/A",
+        "Participant Email": reg?.participantEmail || "N/A",
+        "Participant Phone": reg?.participantPhone || "N/A",
+        "College ID": reg?.collegeId || "N/A",
+        Department: reg?.department || "N/A",
+        "Year of Study": reg?.yearOfStudy || "N/A",
+        "Project Title": reg?.projectTitle || "N/A",
+        "Registration Status": reg?.status || "N/A",
+        "Payment Status": reg?.paymentStatus || "N/A",
+        "Checked In": reg?.checkedIn ? "Yes" : "No",
+        "Checked In At": safeDate(reg?.checkedInAt),
       });
     }
   });
