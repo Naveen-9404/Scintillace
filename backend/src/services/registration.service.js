@@ -147,12 +147,6 @@ const validateEventForRegistration = async (eventId) => {
     );
   }
 
-  if (new Date() >= new Date(event.startDateTime)) {
-    throw new ApiError(
-      "Registration is no longer available because the event has started.",
-      HTTP_STATUS.BAD_REQUEST,
-    );
-  }
 
   return event;
 };
